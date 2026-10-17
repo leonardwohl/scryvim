@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, to catch Scryfall API or picker plugin changes.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        neovim: [stable, nightly]
+    env:
+      SCRYVIM_TEST_PLUGINS: ${{ github.workspace }}/.test-plugins
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+      - uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: "5.1"
+      - uses: leafo/gh-actions-luarocks@v5
+      - run: luarocks install busted && luarocks install nlua
+      - name: Install picker plugins and fzf
+        run: |
+          sudo apt-get install -y fzf
+          for repo in folke/snacks.nvim nvim-telescope/telescope.nvim nvim-lua/plenary.nvim ibhagwan/fzf-lua; do
+            git clone --depth 1 "https://github.com/$repo" "$SCRYVIM_TEST_PLUGINS/${repo#*/}"
+          done
+      - run: make test
+
+  scryfall:
+    name: live Scryfall
+    runs-on: ubuntu-latest
+    env:
+      SCRYVIM_LIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: "5.1"
+      - uses: leafo/gh-actions-luarocks@v5
+      - run: luarocks install busted && luarocks install nlua
+      - run: busted spec/live_spec.lua < /dev/null
+      - name: Show raw Scryfall responses
+        if: failure()
+        run: |
+          for url in 'https://api.scryfall.com/bulk-data/oracle-cards' \
+                     'https://api.scryfall.com/cards/search?q=%21%22Lightning%20Bolt%22' \
+                     'https://api.scryfall.com/cards/search?q=cmc%3E'; do
+            echo "== $url"
+            curl -sS -D - -H 'User-Agent: scryvim/ci' -H 'Accept: application/json' "$url" | head -c 3000
+            echo
+            sleep 1
+          done
+
+  stylua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: 2.0.2
+          args: --check .
