@@ -206,8 +206,10 @@ function M.update(opts, cb)
     if err then
       return finish(err)
     end
-    if not bulk.download_uri then
-      return finish('bulk-data response has no download_uri')
+    -- Scryfall now publishes the JSONL file as jsonl_download_uri.
+    local uri = bulk.jsonl_download_uri or bulk.download_uri
+    if not uri then
+      return finish('bulk-data response has no download URI')
     end
     local meta = M.read_meta()
     if not opts.force and state.loaded and meta and meta.updated_at == bulk.updated_at then
@@ -218,7 +220,7 @@ function M.update(opts, cb)
       end
       return finish(nil)
     end
-    http.download(bulk.download_uri, paths.bulk, function(derr)
+    http.download(uri, paths.bulk, function(derr)
       if derr then
         return finish(derr)
       end

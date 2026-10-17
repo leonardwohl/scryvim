@@ -89,4 +89,32 @@ describe('data', function()
     data.index({ { name = 'Only Card' } })
     assert.are.equal(1, calls)
   end)
+
+  it('updates from jsonl_download_uri and writes metadata', function()
+    local http = require('scryvim.http')
+    local get_json, download = http.get_json, http.download
+    local downloaded
+    http.get_json = function(_, cb)
+      cb(nil, { jsonl_download_uri = 'https://data.example/oracle.jsonl.gz', updated_at = 'new' })
+    end
+    http.download = function(url, path, cb)
+      downloaded = url
+      vim.uv.fs_copyfile(helpers.fixture, path)
+      cb(nil)
+    end
+    data.index({})
+    local done, err = false, nil
+    data.update({ force = true }, function(e)
+      done, err = true, e
+    end)
+    assert(vim.wait(10000, function()
+      return done
+    end))
+    http.get_json, http.download = get_json, download
+    assert.is_nil(err)
+    assert.are.equal('https://data.example/oracle.jsonl.gz', downloaded)
+    assert.are.equal('Lightning Bolt', data.get('Lightning Bolt').name)
+    assert.are.equal('new', data.read_meta().updated_at)
+    assert.is_nil(vim.uv.fs_stat(data.paths().bulk))
+  end)
 end)
