@@ -22,7 +22,7 @@ function M.load_fixture()
   )
   assert(not err, err)
   local meta = assert(io.open(dir .. '/meta.json', 'w'))
-  meta:write(vim.json.encode({ updated_at = 'fixture', checked_at = os.time() }))
+  meta:write(vim.json.encode({ updated_at = 'fixture', checked_at = os.time(), format = data.CACHE_FORMAT }))
   meta:close()
   assert(data.load_file(dir .. '/cards.json'))
   return dir

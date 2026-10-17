@@ -6,6 +6,9 @@ local M = {}
 
 M.BULK_URL = 'https://api.scryfall.com/bulk-data/oracle-cards'
 
+--- Bumped when cards.json gains fields; older caches are rebuilt.
+M.CACHE_FORMAT = 2
+
 local BUILD_SCRIPT = vim.fs.joinpath(vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2)), 'build.lua')
 
 local state = {
@@ -316,7 +319,8 @@ function M.update(opts, cb)
       return finish('bulk-data response has no download URI')
     end
     local meta = M.read_meta()
-    if not opts.force and state.loaded and meta and meta.updated_at == bulk.updated_at then
+    local current = meta and meta.format == M.CACHE_FORMAT and meta.updated_at == bulk.updated_at
+    if not opts.force and state.loaded and current then
       meta.checked_at = os.time()
       write_meta(meta)
       if opts.announce then
@@ -335,7 +339,7 @@ function M.update(opts, cb)
         if berr then
           return finish(berr)
         end
-        write_meta({ updated_at = bulk.updated_at, checked_at = os.time() })
+        write_meta({ updated_at = bulk.updated_at, checked_at = os.time(), format = M.CACHE_FORMAT })
         set_stage('loading')
         M.load_file_async(paths.cards, function(lerr)
           if lerr then
@@ -382,7 +386,8 @@ function M.ensure()
     end
     local meta = M.read_meta()
     local checked = meta and meta.checked_at or 0
-    if os.time() - checked > cfg.max_age_days * 86400 then
+    local stale_format = not meta or meta.format ~= M.CACHE_FORMAT
+    if stale_format or os.time() - checked > cfg.max_age_days * 86400 then
       M.update()
     end
   end)

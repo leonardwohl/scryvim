@@ -6,11 +6,15 @@ describe('build', function()
     local out = build.strip({
       name = 'X',
       cmc = 1,
+      color_identity = { 'U' },
       prices = { usd = '1' },
       legalities = {},
       card_faces = { { name = 'A', colors = { 'U' }, mana_cost = '{U}' } },
     })
-    assert.are.same({ name = 'X', cmc = 1, card_faces = { { name = 'A', mana_cost = '{U}' } } }, out)
+    assert.are.same(
+      { name = 'X', cmc = 1, color_identity = { 'U' }, card_faces = { { name = 'A', mana_cost = '{U}' } } },
+      out
+    )
   end)
 
   it('builds cards.json from the fixture, dropping tokens and emblems', function()
@@ -119,8 +123,32 @@ describe('data', function()
     assert.are.equal('https://data.example/oracle.jsonl.gz', downloaded)
     assert.are.equal('Lightning Bolt', data.get('Lightning Bolt').name)
     assert.are.equal('new', data.read_meta().updated_at)
+    assert.are.equal(data.CACHE_FORMAT, data.read_meta().format)
     assert.is_nil(vim.uv.fs_stat(data.paths().bulk))
     assert.are.same({ 'checking', 'downloading', 'building', 'loading', 'idle' }, stages)
+  end)
+
+  it('rebuilds a cache written in an older format', function()
+    local dir = helpers.load_fixture()
+    local meta = assert(io.open(dir .. '/meta.json', 'w'))
+    meta:write(vim.json.encode({ updated_at = 'fixture', checked_at = os.time() }))
+    meta:close()
+    data._reset()
+    local http = require('scryvim.http')
+    local get_json = http.get_json
+    local checked = false
+    http.get_json = function(_, cb)
+      checked = true
+      cb('offline')
+    end
+    data.ensure()
+    local ok = vim.wait(5000, function()
+      return checked
+    end)
+    http.get_json = get_json
+    assert.is_true(ok)
+    -- The old cache stays usable meanwhile.
+    assert.are.equal('Lightning Bolt', data.get('Lightning Bolt').name)
   end)
 
   it('loads without blocking, keeping the old store until done', function()
