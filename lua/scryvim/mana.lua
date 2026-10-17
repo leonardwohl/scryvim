@@ -20,7 +20,7 @@ local pending = {} ---@type table<integer, true>
 local function chunks(cost)
   local out = {}
   for _, chunk in ipairs(colors.mana_chunks(cost)) do
-    local hl = chunk[2] and { 'LspInlayHint', colors.group(chunk[2], true) } or 'LspInlayHint'
+    local hl = chunk[2] and { 'LspInlayHint', colors.group(chunk[2]) } or 'LspInlayHint'
     out[#out + 1] = { chunk[1], hl }
   end
   return out

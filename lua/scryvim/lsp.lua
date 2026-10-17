@@ -1,5 +1,4 @@
 --- In-process LSP server (see `:h lsp-server`).
-local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local data = require('scryvim.data')
 local parse = require('scryvim.parse')
@@ -112,7 +111,6 @@ function M.create(dispatchers)
         publish(uri)
       end
       pcall(dispatchers.server_request, 'workspace/inlayHint/refresh', nil)
-      pcall(dispatchers.server_request, 'workspace/semanticTokens/refresh', nil)
     end)
   end)
 
@@ -167,12 +165,6 @@ function M.create(dispatchers)
       inlayHintProvider = not colored,
       codeActionProvider = { codeActionKinds = { 'refactor.rewrite' } },
     }
-    if colored then
-      capabilities.semanticTokensProvider = {
-        legend = { tokenTypes = colors.TOKEN_TYPES, tokenModifiers = colors.TOKEN_MODIFIERS },
-        full = true,
-      }
-    end
     return {
       capabilities = capabilities,
       serverInfo = { name = 'scryvim', version = require('scryvim.http').version },
@@ -246,30 +238,6 @@ function M.create(dispatchers)
       end
     end
     return hints
-  end
-
-  -- Card names colored by color identity. Counts and set codes stay plain.
-  handlers['textDocument/semanticTokens/full'] = function(params)
-    local lines = docs[params.textDocument.uri]
-    local out = {}
-    if not lines then
-      return { data = out }
-    end
-    local prev_row = 0
-    for row = 0, #lines - 1 do
-      local parsed, card = card_at(lines, row)
-      local type_index, modifiers
-      if card then
-        type_index, modifiers = colors.token(card)
-      end
-      if type_index then
-        local s, e = parsed.name_range[1], parsed.name_range[2]
-        -- One token per line, so the start is always relative to column 0.
-        vim.list_extend(out, { row - prev_row, s, e - s, type_index, modifiers })
-        prev_row = row
-      end
-    end
-    return { data = out }
   end
 
   handlers['textDocument/codeAction'] = function(params)

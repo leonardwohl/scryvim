@@ -43,7 +43,7 @@ suite('Scryfall (live)', function()
     end)
     assert.truthy(bolt, vim.inspect(cards))
     assert.are.same(
-      { 'cmc', 'color_identity', 'mana_cost', 'name', 'oracle_text', 'scryfall_uri', 'type_line' },
+      { 'cmc', 'mana_cost', 'name', 'oracle_text', 'scryfall_uri', 'type_line' },
       vim.fn.sort(vim.tbl_keys(bolt))
     )
     assert.are.equal('{R}', bolt.mana_cost)

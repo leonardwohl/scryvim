@@ -174,6 +174,7 @@ function M.search(query)
     local adapter = M.adapter(cfg.picker)
     adapter.pick(cards, {
       prompt = 'Scryfall: ' .. query,
+      color = cfg.colors,
       format_item = M.format_item,
       preview = render.markdown,
       on_choose = function(chosen)

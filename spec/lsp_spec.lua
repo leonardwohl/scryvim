@@ -124,44 +124,6 @@ describe('lsp', function()
     }, by_line)
   end)
 
-  it('colors card names by color identity with semantic tokens', function()
-    local legend = vim.lsp.get_client_by_id(client_id).server_capabilities.semanticTokensProvider.legend
-    assert.are.same(require('scryvim.colors').TOKEN_TYPES, legend.tokenTypes)
-    local tokens = request('textDocument/semanticTokens/full', { textDocument = doc() }).data
-    local by_line, row = {}, 0
-    for i = 1, #tokens, 5 do
-      row = row + tokens[i]
-      local s, len = tokens[i + 1], tokens[i + 2]
-      by_line[row] = {
-        LINES[row + 1]:sub(s + 1, s + len),
-        legend.tokenTypes[tokens[i + 3] + 1],
-        tokens[i + 4] == 1 and 'land' or nil,
-      }
-    end
-    assert.are.same({
-      [1] = { 'Lightning Bolt', 'red' },
-      [2] = { 'Counterspell', 'blue' },
-      [3] = { 'Fire // Ice', 'multicolor' },
-      [4] = { 'Island', 'blue', 'land' },
-      [5] = { 'Wrath of God', 'white' },
-      [6] = { 'Delver of Secrets', 'blue' },
-      [10] = { 'Jace, the Mind Sculptor', 'blue' },
-    }, by_line)
-  end)
-
-  it('highlights card names through the client', function()
-    vim.api.nvim_set_current_buf(buf)
-    local found
-    assert(vim.wait(3000, function()
-      found = vim.lsp.semantic_tokens.get_at_pos(buf, 4, 3)
-      return found ~= nil and #found > 0
-    end))
-    assert.are.equal('blue', found[1].type)
-    assert.are.same({ land = true }, found[1].modifiers)
-    -- The count is not highlighted.
-    assert.are.same({}, vim.lsp.semantic_tokens.get_at_pos(buf, 4, 0) or {})
-  end)
-
   it('offers a sort code action for the block under the cursor', function()
     local actions = request('textDocument/codeAction', {
       textDocument = doc(),
