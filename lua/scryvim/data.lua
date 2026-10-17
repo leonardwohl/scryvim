@@ -10,7 +10,6 @@ local BUILD_SCRIPT = vim.fs.joinpath(vim.fs.dirname(debug.getinfo(1, 'S').source
 
 local state = {
   byname = {},
-  names = {},
   lower_names = {},
   count = 0,
   loaded = false,
@@ -19,6 +18,8 @@ local state = {
   waiters = {},
   last_error = nil,
   subscribers = {},
+  stage = nil,
+  progress_subscribers = {},
 }
 
 local function notify(msg, level)
@@ -66,44 +67,63 @@ local function write_meta(meta)
   return write_atomic(M.paths().meta, vim.json.encode(meta))
 end
 
---- Replace the in-memory store with `cards`.
----@param cards table[]
-function M.index(cards)
-  local byname, names, lower_names = {}, {}, {}
-  for _, card in ipairs(cards) do
+local JSON_OPTS = { luanil = { object = true, array = true } }
+
+--- Accumulates cards into a new index; `finish()` swaps it in.
+local function indexer()
+  local byname, from_face, lower_names = {}, {}, {}
+  local self = {}
+
+  function self.add(card)
+    if type(card) ~= 'table' or type(card.name) ~= 'string' then
+      return
+    end
     local key = card.name:lower()
-    if not byname[key] then
-      byname[key] = card
-      names[#names + 1] = card.name
+    -- A card's own name wins over another card's front-face name.
+    if not byname[key] or from_face[key] then
+      lower_names[#lower_names + 1] = key
+      byname[key], from_face[key] = card, nil
     end
     local face = card.card_faces and card.card_faces[1]
     if face and face.name then
       local fkey = face.name:lower()
-      byname[fkey] = byname[fkey] or card
+      if not byname[fkey] then
+        byname[fkey], from_face[fkey] = card, true
+      end
     end
   end
-  table.sort(names, function(a, b)
-    return a:lower() < b:lower()
-  end)
-  for i, name in ipairs(names) do
-    lower_names[i] = name:lower()
+
+  function self.finish()
+    table.sort(lower_names)
+    state.byname, state.lower_names = byname, lower_names
+    state.count = #lower_names
+    state.loaded = true
+    for _, fn in pairs(state.subscribers) do
+      pcall(fn)
+    end
   end
-  state.byname, state.names, state.lower_names = byname, names, lower_names
-  state.count = #names
-  state.loaded = true
-  for _, fn in pairs(state.subscribers) do
-    pcall(fn)
-  end
+
+  return self
 end
 
---- Load a stripped cards.json file into the store.
+--- Replace the in-memory store with `cards`.
+---@param cards table[]
+function M.index(cards)
+  local ix = indexer()
+  for _, card in ipairs(cards) do
+    ix.add(card)
+  end
+  ix.finish()
+end
+
+--- Load a stripped cards.json file into the store, blocking until done.
 ---@return boolean ok, string|nil err
 function M.load_file(path)
   local s = read_file(path)
   if not s then
     return false, 'cannot read ' .. path
   end
-  local ok, cards = pcall(vim.json.decode, s, { luanil = { object = true, array = true } })
+  local ok, cards = pcall(vim.json.decode, s, JSON_OPTS)
   if not ok or type(cards) ~= 'table' then
     return false, 'invalid card cache ' .. path
   end
@@ -111,8 +131,90 @@ function M.load_file(path)
   return true
 end
 
+M.LOAD_SLICE_MS = 8
+
+local load_generation = 0
+
+--- Load cards.json without blocking: decode a slice of lines per event-loop
+--- turn. The current store stays in use until the new one is complete.
+--- `cb(err)` runs on the main loop.
+---@param path string
+---@param cb? fun(err: string|nil)
+function M.load_file_async(path, cb)
+  cb = cb or function() end
+  load_generation = load_generation + 1
+  local generation = load_generation
+  local s = read_file(path)
+  if not s then
+    return vim.schedule(function()
+      cb('cannot read ' .. path)
+    end)
+  end
+  if s:sub(1, 2) ~= '[\n' then
+    -- Not one card per line (written by an older version): decode in one go.
+    return vim.schedule(function()
+      local ok, err = M.load_file(path)
+      cb(not ok and err or nil)
+    end)
+  end
+  local ix = indexer()
+  local pos = 3
+  local function step()
+    -- A newer load replaced this one; it reports instead.
+    if generation ~= load_generation then
+      return
+    end
+    local deadline = vim.uv.hrtime() + M.LOAD_SLICE_MS * 1e6
+    repeat
+      local e = s:find('\n', pos, true)
+      if not e then
+        ix.finish()
+        return cb(nil)
+      end
+      local line = s:sub(pos, e - 1)
+      pos = e + 1
+      if line ~= ']' and line ~= '' then
+        if line:sub(-1) == ',' then
+          line = line:sub(1, -2)
+        end
+        local ok, card = pcall(vim.json.decode, line, JSON_OPTS)
+        if not ok then
+          load_generation = load_generation + 1
+          return cb('invalid card cache ' .. path)
+        end
+        ix.add(card)
+      end
+    until vim.uv.hrtime() > deadline
+    -- A timer (not vim.schedule) so pending input is handled between slices.
+    vim.defer_fn(step, 0)
+  end
+  vim.defer_fn(step, 0)
+end
+
 function M.ready()
   return state.loaded
+end
+
+--- What a running update is doing: 'checking', 'downloading', 'building',
+--- 'loading', or nil when idle.
+function M.stage()
+  return state.stage
+end
+
+--- Subscribe to stage changes: `fn(stage)`. Returns an unsubscribe function.
+function M.on_progress(fn)
+  local key = {}
+  state.progress_subscribers[key] = fn
+  return function()
+    state.progress_subscribers[key] = nil
+  end
+end
+
+local function set_stage(stage)
+  state.stage = stage
+  for _, fn in pairs(state.progress_subscribers) do
+    pcall(fn, stage)
+  end
 end
 
 --- Subscribe to store (re)loads. Returns an unsubscribe function.
@@ -191,6 +293,7 @@ function M.update(opts, cb)
 
   local function finish(err)
     state.updating = false
+    set_stage(nil)
     if err then
       state.last_error = err
       notify('card data update failed: ' .. err, vim.log.levels.WARN)
@@ -202,6 +305,7 @@ function M.update(opts, cb)
     end
   end
 
+  set_stage('checking')
   http.get_json(M.BULK_URL, function(err, bulk)
     if err then
       return finish(err)
@@ -220,25 +324,29 @@ function M.update(opts, cb)
       end
       return finish(nil)
     end
+    set_stage('downloading')
     http.download(uri, paths.bulk, function(derr)
       if derr then
         return finish(derr)
       end
+      set_stage('building')
       M.build(paths.bulk, paths.cards, function(berr)
         os.remove(paths.bulk)
         if berr then
           return finish(berr)
         end
         write_meta({ updated_at = bulk.updated_at, checked_at = os.time() })
-        local ok, lerr = M.load_file(paths.cards)
-        if not ok then
-          return finish(lerr)
-        end
-        state.last_error = nil
-        if opts.announce then
-          notify(('card data updated (%d cards)'):format(state.count))
-        end
-        finish(nil)
+        set_stage('loading')
+        M.load_file_async(paths.cards, function(lerr)
+          if lerr then
+            return finish(lerr)
+          end
+          state.last_error = nil
+          if opts.announce then
+            notify(('card data ready (%d cards)'):format(state.count))
+          end
+          finish(nil)
+        end)
       end)
     end)
   end)
@@ -252,24 +360,32 @@ function M.ensure()
   state.started = true
   local cfg = config.get()
   local paths = M.paths()
-  if vim.uv.fs_stat(paths.cards) then
-    local ok, err = M.load_file(paths.cards)
-    if ok then
-      local meta = M.read_meta()
-      local checked = meta and meta.checked_at or 0
-      if os.time() - checked > cfg.max_age_days * 86400 then
-        M.update()
-      end
-      return
+
+  local function download()
+    if cfg.auto_download then
+      notify('downloading Scryfall card data (about 25 MB); completion and hover start working when it finishes')
+      M.update({ announce = true })
+    else
+      notify('no card data; run :Scryvim update', vim.log.levels.WARN)
     end
-    state.last_error = err
   end
-  if cfg.auto_download then
-    notify('downloading Scryfall card data…')
-    M.update({ announce = true })
-  else
-    notify('no card data; run :Scryvim update', vim.log.levels.WARN)
+
+  if not vim.uv.fs_stat(paths.cards) then
+    return download()
   end
+  set_stage('loading')
+  M.load_file_async(paths.cards, function(err)
+    set_stage(nil)
+    if err then
+      state.last_error = err
+      return download()
+    end
+    local meta = M.read_meta()
+    local checked = meta and meta.checked_at or 0
+    if os.time() - checked > cfg.max_age_days * 86400 then
+      M.update()
+    end
+  end)
 end
 
 function M.info()
@@ -278,6 +394,7 @@ function M.info()
     count = state.count,
     ready = state.loaded,
     updating = state.updating,
+    stage = state.stage,
     updated_at = meta.updated_at,
     checked_at = meta.checked_at,
     age_days = meta.checked_at and (os.time() - meta.checked_at) / 86400 or nil,
@@ -288,9 +405,11 @@ end
 
 --- Test helper: forget all loaded state.
 function M._reset()
-  state.byname, state.names, state.lower_names = {}, {}, {}
+  state.byname, state.lower_names = {}, {}
   state.count, state.loaded, state.started, state.updating = 0, false, false, false
   state.waiters, state.last_error, state.subscribers = {}, nil, {}
+  state.stage, state.progress_subscribers = nil, {}
+  load_generation = load_generation + 1
 end
 
 return M

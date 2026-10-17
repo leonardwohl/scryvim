@@ -123,6 +123,12 @@ is missing and `auto_download` is set, it downloads Scryfall's Oracle Cards
 bulk file and builds a stripped copy in a child Neovim process. Language
 features return nothing until the data is ready, then refresh.
 
+While data is being checked, downloaded, built or loaded, the `scryvim`
+language server reports LSP progress, which shows in |vim.lsp.status()| and
+in progress UIs such as fidget.nvim. Hovering a card meanwhile says which
+step is running. Loading happens in small slices, so the editor stays
+responsive.
+
 When the cache is older than `max_age_days`, it is used immediately and
 refreshed in the background. A failed update leaves the existing cache in
 place; the error is shown in |:checkhealth|.

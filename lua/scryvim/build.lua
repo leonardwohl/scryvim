@@ -102,9 +102,15 @@ function M.run(input, output)
     error('no cards parsed from ' .. input)
   end
 
+  -- A JSON array with one card per line, so the loader can decode it in
+  -- small chunks without blocking the editor.
+  local lines = {}
+  for i, card in ipairs(cards) do
+    lines[i] = vim.json.encode(card)
+  end
   local tmp = output .. '.tmp'
   local f = assert(io.open(tmp, 'wb'))
-  f:write(vim.json.encode(cards))
+  f:write('[\n', table.concat(lines, ',\n'), '\n]\n')
   f:close()
   assert(os.rename(tmp, output))
   return #cards
