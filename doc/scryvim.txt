@@ -1,0 +1,141 @@
+*scryvim.txt*  Magic: The Gathering decklists backed by Scryfall data
+
+==============================================================================
+CONTENTS                                                    *scryvim-contents*
+
+  1. Introduction ............................. |scryvim-intro|
+  2. Requirements ............................. |scryvim-requirements|
+  3. Decklist format .......................... |scryvim-format|
+  4. Commands and mappings .................... |scryvim-commands|
+  5. LSP features ............................. |scryvim-lsp|
+  6. Configuration ............................ |scryvim-config|
+  7. Card data ................................ |scryvim-data|
+  8. Lua API .................................. |scryvim-api|
+
+==============================================================================
+1. INTRODUCTION                                                *scryvim-intro*
+
+scryvim helps you build decks in plain-text decklists:
+
+- card name completion (any LSP completion engine),
+- a fuzzy picker over a Scryfall query that inserts the chosen cards,
+- mana costs as inlay hints and full card text on hover,
+- sorting cards by mana value.
+
+All lookups use a local copy of Scryfall's Oracle Cards bulk data, so typing
+never hits the network. scryvim is not produced by or endorsed by Scryfall.
+
+==============================================================================
+2. REQUIREMENTS                                         *scryvim-requirements*
+
+- Neovim 0.11 or newer.
+- `curl` and `gzip` on $PATH.
+- Optional pickers: snacks.nvim, telescope.nvim, fzf-lua. Without one,
+  |vim.ui.select()| is used.
+
+Run |:checkhealth| scryvim to verify.
+
+==============================================================================
+3. DECKLIST FORMAT                                            *scryvim-format*
+
+Files ending in `.dec` or `.deck` get the `deck` filetype. Any buffer can opt
+in with `:set filetype=deck`.
+
+Lines are one of:
+
+  card     `4 Lightning Bolt`, `4x Lightning Bolt`, `Lightning Bolt`,
+           `4 Lightning Bolt (M10) 146`, `4 Lightning Bolt [M10]`,
+           `SB: 2 Duress`
+  section  `Deck`, `Sideboard`, `Commander`, `Companion`, `Maybeboard`
+           (case-insensitive, optional trailing `:`)
+  comment  `// ...` or `# ...`
+  blank    empty or whitespace only
+
+Set codes and collector numbers are preserved but ignored for lookups.
+
+==============================================================================
+4. COMMANDS AND MAPPINGS                                    *scryvim-commands*
+
+                                                                    *:Scryvim*
+:Scryvim search [query]                                  *:Scryvim-search*
+    Search Scryfall (full Scryfall syntax) and open the picker. Prompts for
+    a query when none is given. Chosen cards increment an existing line's
+    count, or are inserted as `1 <name>` below the cursor.
+
+:[range]Scryvim sort                                       *:Scryvim-sort*
+    Sort by mana value. Without a range, sorts the block under the cursor.
+    Sections, comments and blank lines divide blocks; each block is sorted
+    on its own: spells by mana value then name, then lands by name, then
+    unknown cards in their original order.
+
+:Scryvim update                                          *:Scryvim-update*
+    Download and rebuild the card data now.
+
+:Scryvim info                                              *:Scryvim-info*
+    Show card count, Scryfall data timestamp and cache age.
+
+scryvim defines no default keymaps. These are provided:
+
+    <Plug>(scryvim-search)    normal mode               *<Plug>(scryvim-search)*
+    <Plug>(scryvim-sort)      normal and visual mode    *<Plug>(scryvim-sort)*
+
+Example: >lua
+    vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
+    vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
+<
+==============================================================================
+5. LSP FEATURES                                                  *scryvim-lsp*
+
+scryvim runs an in-process language server named `scryvim`, enabled for the
+`deck` filetype through |vim.lsp.enable()|. It provides:
+
+- completion of card names,
+- hover with the card's Oracle text (|vim.lsp.buf.hover()|),
+- mana costs as inlay hints (|lsp-inlay_hint|),
+- a "Sort by mana value" code action (|vim.lsp.buf.code_action()|),
+- warnings for unknown card names (|vim.diagnostic|).
+
+==============================================================================
+6. CONFIGURATION                                              *scryvim-config*
+
+Configure with `vim.g.scryvim` or `require('scryvim').setup()`; the latter
+wins. `setup()` is optional. Defaults: >lua
+    {
+      extensions    = { 'dec', 'deck' },
+      auto_download = true,     -- fetch card data on first use
+      max_age_days  = 7,        -- refresh in the background after this
+      inlay_hints   = true,
+      diagnostics   = true,
+      picker        = 'auto',   -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
+      search        = { max_pages = 3 },   -- 175 cards per page
+      cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
+    }
+<
+`picker` may also be a table with a `pick(items, opts)` function, where opts
+has `prompt`, `format_item(card)`, `preview(card)` (markdown) and
+`on_choose(cards)`.
+
+==============================================================================
+7. CARD DATA                                                    *scryvim-data*
+
+On the first `deck` buffer, scryvim loads `cards.json` from `cache_dir`. If it
+is missing and `auto_download` is set, it downloads Scryfall's Oracle Cards
+bulk file and builds a stripped copy in a child Neovim process. Language
+features return nothing until the data is ready, then refresh.
+
+When the cache is older than `max_age_days`, it is used immediately and
+refreshed in the background. A failed update leaves the existing cache in
+place; the error is shown in |:checkhealth|.
+
+==============================================================================
+8. LUA API                                                       *scryvim-api*
+
+require('scryvim').setup({opts})          See |scryvim-config|.
+require('scryvim').search({query})        Same as |:Scryvim-search|.
+require('scryvim').sort({buf}, {first}, {last})
+                                          Same as |:Scryvim-sort|; 1-based
+                                          inclusive lines.
+require('scryvim').update()               Same as |:Scryvim-update|.
+require('scryvim').info()                 Same as |:Scryvim-info|.
+
+ vim:tw=78:ts=8:ft=help:norl:
