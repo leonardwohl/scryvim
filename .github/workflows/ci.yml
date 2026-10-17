@@ -54,6 +54,17 @@ jobs:
       - uses: leafo/gh-actions-luarocks@v5
       - run: luarocks install busted && luarocks install nlua
       - run: busted spec/live_spec.lua < /dev/null
+      - name: Show raw Scryfall responses
+        if: failure()
+        run: |
+          for url in 'https://api.scryfall.com/bulk-data/oracle-cards' \
+                     'https://api.scryfall.com/cards/search?q=%21%22Lightning%20Bolt%22' \
+                     'https://api.scryfall.com/cards/search?q=cmc%3E'; do
+            echo "== $url"
+            curl -sS -D - -H 'User-Agent: scryvim/ci' -H 'Accept: application/json' "$url" | head -c 3000
+            echo
+            sleep 1
+          done
 
   stylua:
     runs-on: ubuntu-latest
