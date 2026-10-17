@@ -6,15 +6,11 @@ describe('build', function()
     local out = build.strip({
       name = 'X',
       cmc = 1,
-      color_identity = { 'U' },
       prices = { usd = '1' },
       legalities = {},
       card_faces = { { name = 'A', colors = { 'U' }, mana_cost = '{U}' } },
     })
-    assert.are.same(
-      { name = 'X', cmc = 1, color_identity = { 'U' }, card_faces = { { name = 'A', mana_cost = '{U}' } } },
-      out
-    )
+    assert.are.same({ name = 'X', cmc = 1, card_faces = { { name = 'A', mana_cost = '{U}' } } }, out)
   end)
 
   it('builds cards.json from the fixture, dropping tokens and emblems', function()

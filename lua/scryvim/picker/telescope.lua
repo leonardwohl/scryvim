@@ -1,5 +1,18 @@
 --- telescope.nvim adapter: multi-select with markdown preview.
+local colors = require('scryvim.colors')
+
 local M = {}
+
+-- Telescope display function: the text plus highlights for its mana symbols.
+local function colored(text)
+  return function()
+    local hls = {}
+    for _, sym in ipairs(colors.symbols(text)) do
+      hls[#hls + 1] = { { sym[1], sym[2] }, colors.group(sym[3]) }
+    end
+    return text, hls
+  end
+end
 
 function M.pick(items, opts)
   local actions = require('telescope.actions')
@@ -15,7 +28,8 @@ function M.pick(items, opts)
       finder = finders.new_table({
         results = items,
         entry_maker = function(card)
-          return { value = card, display = opts.format_item(card), ordinal = card.name }
+          local text = opts.format_item(card)
+          return { value = card, display = opts.color and colored(text) or text, ordinal = card.name }
         end,
       }),
       sorter = conf.generic_sorter({}),
@@ -23,6 +37,9 @@ function M.pick(items, opts)
         define_preview = function(self, entry)
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(opts.preview(entry.value), '\n'))
           vim.bo[self.state.bufnr].filetype = 'markdown'
+          if opts.color then
+            colors.highlight_buf(self.state.bufnr)
+          end
         end,
       }),
       attach_mappings = function(prompt_bufnr)

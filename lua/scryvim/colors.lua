@@ -1,50 +1,10 @@
---- Card and mana colors: semantic token classification, mana symbol
---- highlighting and the default highlight groups.
+--- Mana symbol colors: finding `{…}` symbols in text, their highlight
+--- groups, and ANSI output for terminal previews.
 local M = {}
 
---- Semantic token legend. Types are a card's color identity; the `land`
---- modifier marks lands so they can be styled separately.
-M.TOKEN_TYPES = { 'white', 'blue', 'black', 'red', 'green', 'multicolor', 'colorless' }
-M.TOKEN_MODIFIERS = { 'land' }
-
-local TYPE_INDEX = {}
-for i, t in ipairs(M.TOKEN_TYPES) do
-  TYPE_INDEX[t] = i - 1
-end
+M.COLORS = { 'white', 'blue', 'black', 'red', 'green', 'multicolor', 'colorless' }
 
 local COLOR_NAMES = { W = 'white', U = 'blue', B = 'black', R = 'red', G = 'green' }
-
---- Token type for a card's color identity, or nil when the card data has no
---- color identity (a cache built before it was recorded).
----@param card table
----@return string|nil
-function M.identity(card)
-  local ci = card.color_identity
-  if type(ci) ~= 'table' then
-    return nil
-  end
-  if #ci == 0 then
-    return 'colorless'
-  elseif #ci > 1 then
-    return 'multicolor'
-  end
-  return COLOR_NAMES[ci[1]]
-end
-
---- True when the card's front face is a land.
-function M.is_land(card)
-  local front = (card.type_line or ''):match('^(.-)%s*//') or card.type_line or ''
-  return front:find('Land', 1, true) ~= nil
-end
-
---- `{type, modifiers}` indices for a semantic token, or nil.
-function M.token(card)
-  local t = M.identity(card)
-  if not t then
-    return nil
-  end
-  return TYPE_INDEX[t], M.is_land(card) and 1 or 0
-end
 
 local function symbol_color(sym)
   local found
@@ -57,30 +17,107 @@ local function symbol_color(sym)
   return found and COLOR_NAMES[found] or 'colorless'
 end
 
---- Split a mana cost into `{ text, color }` chunks, one per `{…}` symbol.
---- Text between symbols (the ` // ` of split cards) has no color.
+--- Mana and other card symbols in `text`: `{ start, end, color }` with
+--- 0-based, end-exclusive byte columns. Braces around anything that isn't a
+--- card symbol (`{foo}`) are skipped.
+---@param text string
+---@return { [1]: integer, [2]: integer, [3]: string }[]
+function M.symbols(text)
+  local out = {}
+  for s, sym, e in text:gmatch('(){([%dWUBRGCXYZSTQEPH/]+)}()') do
+    out[#out + 1] = { s - 1, e - 1, symbol_color(sym) }
+  end
+  return out
+end
+
+--- Split text into `{ text, color }` chunks, one per `{…}` symbol. Text
+--- between symbols (the ` // ` of split cards) has no color.
 ---@param cost string
 ---@return { [1]: string, [2]: string|nil }[]
 function M.mana_chunks(cost)
   local chunks = {}
-  local pos = 1
-  for s, sym, e in cost:gmatch('(){([^}]*)}()') do
-    if s > pos then
-      chunks[#chunks + 1] = { cost:sub(pos, s - 1) }
+  local pos = 0
+  for _, sym in ipairs(M.symbols(cost)) do
+    if sym[1] > pos then
+      chunks[#chunks + 1] = { cost:sub(pos + 1, sym[1]) }
     end
-    chunks[#chunks + 1] = { '{' .. sym .. '}', symbol_color(sym) }
-    pos = e
+    chunks[#chunks + 1] = { cost:sub(sym[1] + 1, sym[2]), sym[3] }
+    pos = sym[2]
   end
-  if pos <= #cost then
-    chunks[#chunks + 1] = { cost:sub(pos) }
+  if pos < #cost then
+    chunks[#chunks + 1] = { cost:sub(pos + 1) }
   end
   return chunks
 end
 
---- Highlight group for a color name: `ScryvimRed`, or `ScryvimManaRed` for
---- mana symbols.
-function M.group(color, mana)
-  return 'Scryvim' .. (mana and 'Mana' or '') .. color:sub(1, 1):upper() .. color:sub(2)
+--- Highlight group for a color name: `ScryvimManaRed`, ...
+function M.group(color)
+  return 'ScryvimMana' .. color:sub(1, 1):upper() .. color:sub(2)
+end
+
+--- `{ text, hl_group }` segments for a line, as picker list formatters take.
+---@param text string
+---@return { [1]: string, [2]: string|nil }[]
+function M.segments(text)
+  return vim.tbl_map(function(chunk)
+    return { chunk[1], chunk[2] and M.group(chunk[2]) }
+  end, M.mana_chunks(text))
+end
+
+M.ns = vim.api.nvim_create_namespace('scryvim.colors')
+
+--- Color every mana symbol in `buf`, replacing earlier highlights.
+---@param buf integer
+function M.highlight_buf(buf)
+  vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
+  for row, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    for _, sym in ipairs(M.symbols(line)) do
+      vim.api.nvim_buf_set_extmark(buf, M.ns, row - 1, sym[1], { end_col = sym[2], hl_group = M.group(sym[3]) })
+    end
+  end
+end
+
+--- Color `buf` when it is an LSP float (hover) opened from a deck buffer.
+---@param buf integer
+function M.highlight_float(buf)
+  local win = vim.fn.bufwinid(buf)
+  local source = win ~= -1 and vim.w[win].lsp_floating_bufnr
+  if source and vim.api.nvim_buf_is_valid(source) and vim.bo[source].filetype == 'deck' then
+    M.highlight_buf(buf)
+  end
+end
+
+--- Snacks-style extmarks (1-based rows) coloring the mana symbols in `text`.
+---@param text string
+---@return table[]
+function M.extmarks(text)
+  local out = {}
+  for row, line in ipairs(vim.split(text, '\n', { plain = true })) do
+    for _, sym in ipairs(M.symbols(line)) do
+      out[#out + 1] = { row = row, col = sym[1], end_col = sym[2], hl_group = M.group(sym[3]) }
+    end
+  end
+  return out
+end
+
+--- `text` with each mana symbol wrapped in a 24-bit ANSI color, for
+--- previews that run in a terminal.
+---@param text string
+---@return string
+function M.ansi(text)
+  local out, pos = {}, 0
+  for _, sym in ipairs(M.symbols(text)) do
+    local fg = vim.api.nvim_get_hl(0, { name = M.group(sym[3]), link = false }).fg
+    out[#out + 1] = text:sub(pos + 1, sym[1])
+    local s = text:sub(sym[1] + 1, sym[2])
+    if fg then
+      s = ('\27[38;2;%d;%d;%dm%s\27[39m'):format(math.floor(fg / 65536), math.floor(fg / 256) % 256, fg % 256, s)
+    end
+    out[#out + 1] = s
+    pos = sym[2]
+  end
+  out[#out + 1] = text:sub(pos + 1)
+  return table.concat(out)
 end
 
 local PALETTE = {
@@ -108,12 +145,9 @@ local PALETTE = {
 --- colorschemes and user config can override any of them.
 function M.setup_highlights()
   local palette = PALETTE[vim.o.background] or PALETTE.dark
-  local set = vim.api.nvim_set_hl
-  for _, color in ipairs(M.TOKEN_TYPES) do
+  for _, color in ipairs(M.COLORS) do
     local c = palette[color]
-    set(0, M.group(color), { default = true, fg = c[1], ctermfg = c[2] })
-    set(0, M.group(color, true), { default = true, link = M.group(color) })
-    set(0, '@lsp.type.' .. color .. '.deck', { default = true, link = M.group(color) })
+    vim.api.nvim_set_hl(0, M.group(color), { default = true, fg = c[1], ctermfg = c[2] })
   end
 end
 

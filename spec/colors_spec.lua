@@ -1,39 +1,20 @@
 local colors = require('scryvim.colors')
 
 describe('colors', function()
-  it('classifies color identity', function()
-    assert.are.equal('red', colors.identity({ color_identity = { 'R' } }))
-    assert.are.equal('multicolor', colors.identity({ color_identity = { 'U', 'R' } }))
-    assert.are.equal('colorless', colors.identity({ color_identity = {} }))
-    -- Caches built before color identity was recorded.
-    assert.is_nil(colors.identity({ name = 'Old' }))
-  end)
-
-  it('detects lands by their front face', function()
-    assert.is_true(colors.is_land({ type_line = 'Basic Land — Island' }))
-    assert.is_true(colors.is_land({ type_line = 'Land Creature — Forest Dryad' }))
-    assert.is_false(colors.is_land({ type_line = 'Sorcery // Land' }))
-    assert.is_false(colors.is_land({ type_line = 'Instant' }))
-    assert.is_false(colors.is_land({}))
-  end)
-
-  it('builds semantic token indices', function()
-    local blue = vim.fn.index(colors.TOKEN_TYPES, 'blue')
-    assert.are.same({ blue, 1 }, { colors.token({ color_identity = { 'U' }, type_line = 'Basic Land — Island' }) })
-    assert.are.same({ blue, 0 }, { colors.token({ color_identity = { 'U' }, type_line = 'Instant' }) })
-    assert.is_nil(colors.token({ type_line = 'Instant' }))
-  end)
-
-  it('splits mana costs into colored symbols', function()
+  it('finds mana symbols and their colors', function()
     assert.are.same({
-      { '{X}', 'colorless' },
-      { '{2}', 'colorless' },
-      { '{W}', 'white' },
-      { '{U/B}', 'multicolor' },
-      { '{G/P}', 'green' },
-      { '{2/R}', 'red' },
-      { '{C}', 'colorless' },
-    }, colors.mana_chunks('{X}{2}{W}{U/B}{G/P}{2/R}{C}'))
+      { 0, 3, 'colorless' },
+      { 3, 6, 'colorless' },
+      { 6, 9, 'white' },
+      { 9, 14, 'multicolor' },
+      { 14, 19, 'green' },
+      { 19, 24, 'red' },
+      { 24, 27, 'colorless' },
+    }, colors.symbols('{X}{2}{W}{U/B}{G/P}{2/R}{C}'))
+    assert.are.same({ { 0, 3, 'colorless' }, { 9, 12, 'green' } }, colors.symbols('{T}: Add {G}. {not a symbol}'))
+  end)
+
+  it('splits mana costs into colored chunks', function()
     assert.are.same({
       { '{1}', 'colorless' },
       { '{R}', 'red' },
@@ -41,14 +22,53 @@ describe('colors', function()
       { '{1}', 'colorless' },
       { '{U}', 'blue' },
     }, colors.mana_chunks('{1}{R} // {1}{U}'))
+    assert.are.same({ { 'Bolt ' }, { '{R}', 'ScryvimManaRed' } }, colors.segments('Bolt {R}'))
+  end)
+
+  it('highlights symbols in a buffer', function()
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '**Bolt**  {R}', '{T}: Add {G}.' })
+    colors.highlight_buf(buf)
+    colors.highlight_buf(buf) -- replaces, not duplicates
+    local marks = {}
+    for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, colors.ns, 0, -1, { details = true })) do
+      marks[#marks + 1] = { m[2], m[3], m[4].end_col, m[4].hl_group }
+    end
+    assert.are.same({
+      { 0, 10, 13, 'ScryvimManaRed' },
+      { 1, 0, 3, 'ScryvimManaColorless' },
+      { 1, 9, 12, 'ScryvimManaGreen' },
+    }, marks)
+    assert.are.same(
+      { { row = 2, col = 9, end_col = 12, hl_group = 'ScryvimManaGreen' } },
+      colors.extmarks('Add\nTap: Add {G}.')
+    )
+  end)
+
+  it('colors hover floats opened from deck buffers only', function()
+    local function hover_marks(ft)
+      local src = vim.api.nvim_create_buf(true, false)
+      vim.bo[src].filetype = ft
+      vim.api.nvim_set_current_buf(src)
+      local fbuf, fwin = vim.lsp.util.open_floating_preview({ '**Bolt**  {R}' }, 'markdown', {})
+      colors.highlight_float(fbuf)
+      local n = #vim.api.nvim_buf_get_extmarks(fbuf, colors.ns, 0, -1, {})
+      vim.api.nvim_win_close(fwin, true)
+      return n
+    end
+    assert.are.equal(1, hover_marks('deck'))
+    assert.are.equal(0, hover_marks('lua'))
+  end)
+
+  it('paints symbols with ANSI colors', function()
+    vim.api.nvim_set_hl(0, 'ScryvimManaRed', { fg = '#102030' })
+    assert.are.equal('Bolt \27[38;2;16;32;48m{R}\27[39m!', colors.ansi('Bolt {R}!'))
   end)
 
   it('defines overridable highlight groups', function()
-    vim.api.nvim_set_hl(0, 'ScryvimRed', { fg = '#123456' })
+    vim.api.nvim_set_hl(0, 'ScryvimManaRed', { fg = '#123456' })
     colors.setup_highlights()
-    assert.are.equal(tonumber('123456', 16), vim.api.nvim_get_hl(0, { name = 'ScryvimRed' }).fg)
-    assert.is_not_nil(vim.api.nvim_get_hl(0, { name = 'ScryvimBlue' }).fg)
-    assert.are.equal('ScryvimBlue', vim.api.nvim_get_hl(0, { name = 'ScryvimManaBlue' }).link)
-    assert.are.equal('ScryvimGreen', vim.api.nvim_get_hl(0, { name = '@lsp.type.green.deck' }).link)
+    assert.are.equal(tonumber('123456', 16), vim.api.nvim_get_hl(0, { name = 'ScryvimManaRed' }).fg)
+    assert.is_not_nil(vim.api.nvim_get_hl(0, { name = 'ScryvimManaBlue' }).fg)
   end)
 end)

@@ -94,8 +94,7 @@ scryvim runs an in-process language server named `scryvim`, enabled for the
 - hover with the card's Oracle text (|vim.lsp.buf.hover()|),
 - mana costs as inlay hints (|lsp-inlay_hint|),
 - a "Sort by mana value" code action (|vim.lsp.buf.code_action()|),
-- warnings for unknown card names (|vim.diagnostic|),
-- card names colored by color identity (|lsp-semantic-highlight|).
+- warnings for unknown card names (|vim.diagnostic|).
 
 ==============================================================================
 6. CONFIGURATION                                              *scryvim-config*
@@ -150,34 +149,32 @@ require('scryvim').sort({buf}, {first}, {last})
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
 
- ==============================================================================
+==============================================================================
 9. COLORS                                                    *scryvim-colors*
 
-With `colors` on, card names are colored by the card's color identity, and
-each mana symbol in the mana cost after a card is colored by its color. The
-count and set code keep the normal text color.
+With `colors` on, mana symbols are colored by their color wherever scryvim
+shows them: the mana cost after each card line, the hover window, and the
+search picker's list and preview (snacks.nvim, telescope.nvim, fzf-lua).
+Card names, counts and set codes keep the normal text color.
 
-Card names are LSP semantic tokens (|lsp-semantic-highlight|). The token type
-is one of `white`, `blue`, `black`, `red`, `green`, `multicolor` or
-`colorless`; lands also carry the `land` modifier. Each type links to a
-scryvim group:
+Hybrid symbols such as `{U/B}` count as multicolor; generic, `{X}`, `{C}`
+and `{T}` symbols as colorless. Each color has a highlight group:
 
-    @lsp.type.{color}.deck  ->  ScryvimWhite, ScryvimBlue, ScryvimBlack,
-                                ScryvimRed, ScryvimGreen,
-                                ScryvimMulticolor, ScryvimColorless
+    ScryvimManaWhite        ScryvimManaGreen
+    ScryvimManaBlue         ScryvimManaMulticolor
+    ScryvimManaBlack        ScryvimManaColorless
+    ScryvimManaRed
 
-Mana costs replace the inlay hints, since inlay hints are drawn in a single
-color. Each symbol uses `LspInlayHint` with one of `ScryvimManaWhite`,
-`ScryvimManaBlue`, ... on top; these link to the groups above. Hybrid
-symbols such as `{U/B}` are multicolor; generic, `{X}` and `{C}` symbols are
-colorless. Set `inlay_hints = false` to hide mana costs entirely.
+The mana costs after card lines replace the inlay hints, since inlay hints
+are drawn in a single color; each symbol uses `LspInlayHint` with the color
+group on top. Set `inlay_hints = false` to hide them entirely. The fzf-lua
+picker runs in a terminal, so it uses the groups' foreground colors.
 
 The defaults depend on 'background'. Override any group in your config or
 colorscheme, for example: >lua
-    vim.api.nvim_set_hl(0, 'ScryvimBlack', { fg = '#9a7fc0' })
-    vim.api.nvim_set_hl(0, '@lsp.typemod.blue.land.deck', { fg = '#5aa9e6', italic = true })
+    vim.api.nvim_set_hl(0, 'ScryvimManaBlack', { fg = '#9a7fc0' })
 <
-With `colors = false`, names use the normal text color and mana costs are
-plain inlay hints.
+With `colors = false`, mana costs are plain inlay hints and nothing else is
+colored.
 
 vim:tw=78:ts=8:ft=help:norl:

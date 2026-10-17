@@ -52,6 +52,17 @@ vim.api.nvim_create_autocmd('ColorScheme', {
   end,
 })
 
+-- Color mana symbols in hover windows opened from deck buffers.
+vim.api.nvim_create_autocmd('FileType', {
+  group = group,
+  pattern = 'markdown',
+  callback = function(args)
+    if require('scryvim.config').get().colors then
+      require('scryvim.colors').highlight_float(args.buf)
+    end
+  end,
+})
+
 vim.api.nvim_create_autocmd('LspAttach', {
   group = group,
   callback = function(args)
