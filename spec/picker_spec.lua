@@ -82,8 +82,19 @@ describe('picker', function()
     assert.are.same({ '1 Opt', '1 Shock' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
   end)
 
-  it('resolves auto to vim.ui.select when no picker plugin is installed', function()
-    local _, name = picker.adapter('auto')
-    assert.are.equal('select', name)
+  it('resolves auto in order snacks, telescope, fzf-lua, then vim.ui.select', function()
+    local orig = picker._available
+    local installed = {}
+    picker._available = function(module)
+      return installed[module] == true
+    end
+    local names = {}
+    for _, add in ipairs({ 'none', 'fzf-lua', 'telescope', 'snacks' }) do
+      installed[add] = true
+      local _, name = picker.adapter('auto')
+      names[#names + 1] = name
+    end
+    picker._available = orig
+    assert.are.same({ 'select', 'fzf_lua', 'telescope', 'snacks' }, names)
   end)
 end)

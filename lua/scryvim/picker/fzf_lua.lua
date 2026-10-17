@@ -9,17 +9,13 @@ function M.pick(items, opts)
     by_line[lines[i]] = card
   end
 
-  local preview
-  if fzf.shell and fzf.shell.raw_preview_action_cmd then
-    preview = fzf.shell.raw_preview_action_cmd(function(selected)
-      local card = selected and by_line[selected[1]]
-      return card and ('printf %%s %s'):format(vim.fn.shellescape(opts.preview(card))) or 'true'
-    end)
-  end
-
   fzf.fzf_exec(lines, {
     prompt = 'Scryfall> ',
-    preview = preview,
+    -- fzf-lua runs a Lua function preview in Neovim and shows what it returns.
+    preview = function(selected)
+      local card = selected and by_line[selected[1]]
+      return card and opts.preview(card) or ''
+    end,
     fzf_opts = { ['--multi'] = true },
     actions = {
       ['default'] = function(selected)

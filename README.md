@@ -83,6 +83,11 @@ make test    # busted
 make lint    # stylua --check
 ```
 
+Two opt-in suites run in CI:
+
+- `SCRYVIM_TEST_PLUGINS=<dir>` drives the real snacks.nvim, telescope.nvim and fzf-lua pickers. `<dir>` holds checkouts of those three plus plenary.nvim, and `fzf` must be on `$PATH`.
+- `SCRYVIM_LIVE=1 busted spec/live_spec.lua` talks to the real Scryfall API and downloads the full Oracle Cards file once.
+
 ## Disclaimer
 
 scryvim is unofficial Fan Content. It is not produced by or endorsed by Scryfall or Wizards of the Coast. Card data is provided by Scryfall's API and bulk data.

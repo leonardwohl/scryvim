@@ -15,6 +15,11 @@ local AUTO_ORDER = {
   { name = 'fzf_lua', probe = 'fzf-lua' },
 }
 
+--- Overridable for tests.
+function M._available(module)
+  return (pcall(require, module))
+end
+
 --- Resolve the configured adapter. A table with `pick()` is used as-is.
 ---@param name string|table
 ---@return table adapter, string name
@@ -24,7 +29,7 @@ function M.adapter(name)
   end
   if name == 'auto' then
     for _, a in ipairs(AUTO_ORDER) do
-      if pcall(require, a.probe) then
+      if M._available(a.probe) then
         return require('scryvim.picker.' .. a.name), a.name
       end
     end

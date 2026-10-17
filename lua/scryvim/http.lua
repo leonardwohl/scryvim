@@ -96,7 +96,7 @@ end
 function M.download(url, path, cb)
   throttle(url, function()
     M._system(
-      curl(url, { '-o', path, '-w', '%{http_code}' }),
+      curl(url, { '--compressed', '-o', path, '-w', '%{http_code}' }),
       vim.schedule_wrap(function(res)
         local status = tonumber(vim.trim(res.stdout or '')) or 0
         if res.code ~= 0 or status ~= 200 then
