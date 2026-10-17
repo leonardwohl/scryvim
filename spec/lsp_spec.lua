@@ -241,3 +241,67 @@ describe('lsp while card data downloads', function()
     assert.are.equal('window/workDoneProgress/create', requests[1])
   end)
 end)
+
+describe('lsp with type_colors', function()
+  local tbuf, tclient
+
+  setup(function()
+    helpers.block_network()
+    helpers.load_fixture()
+    vim.g.scryvim = vim.tbl_extend('force', vim.g.scryvim, { type_colors = true })
+    tbuf = vim.api.nvim_create_buf(true, false)
+    vim.api.nvim_buf_set_name(tbuf, vim.fn.tempname() .. '.deck')
+    vim.bo[tbuf].filetype = 'deck'
+    vim.api.nvim_buf_set_lines(tbuf, 0, -1, false, {
+      'Deck',
+      '4 Lightning Bolt',
+      '1 Dryad Arbor (FUT) 174',
+      '1 Not A Real Card',
+      '1 Jace, the Mind Sculptor',
+      '1 Delver of Secrets',
+    })
+    vim.api.nvim_set_current_buf(tbuf)
+    tclient = assert(vim.lsp.start({
+      name = 'scryvim-types',
+      cmd = function(dispatchers)
+        return require('scryvim.lsp').create(dispatchers)
+      end,
+    }, { bufnr = tbuf }))
+    -- Let the server's own load of the cache finish before other specs
+    -- swap the cache dir.
+    assert(vim.wait(5000, function()
+      local client = vim.lsp.get_client_by_id(tclient)
+      return client ~= nil and client.initialized == true and require('scryvim.data').stage() == nil
+    end))
+  end)
+
+  teardown(function()
+    vim.lsp.stop_client(tclient, true)
+    vim.g.scryvim = vim.tbl_extend('force', vim.g.scryvim, { type_colors = false })
+  end)
+
+  local function token_at(row, col)
+    for _, t in ipairs(vim.lsp.semantic_tokens.get_at_pos(tbuf, row, col) or {}) do
+      return t
+    end
+  end
+
+  it('colors card names by card type', function()
+    assert(vim.wait(5000, function()
+      return token_at(1, 2) ~= nil
+    end))
+    local legend = vim.lsp.get_client_by_id(tclient).server_capabilities.semanticTokensProvider.legend
+    assert.are.same(require('scryvim.types').TYPES, legend.tokenTypes)
+    local function at(row, col)
+      local t = token_at(row, col)
+      return t and { t.type, t.start_col, t.end_col }
+    end
+    assert.are.same({ 'instant', 2, 16 }, at(1, 2))
+    assert.are.same({ 'land', 2, 13 }, at(2, 5))
+    assert.is_nil(at(2, 15)) -- set code
+    assert.is_nil(at(3, 5)) -- unknown card
+    assert.are.same({ 'planeswalker', 2, 25 }, at(4, 2))
+    assert.are.same({ 'creature', 2, 19 }, at(5, 2))
+    assert.is_nil(at(0, 1))
+  end)
+end)

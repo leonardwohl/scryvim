@@ -7,6 +7,7 @@ local function defaults()
     max_age_days = 7,
     inlay_hints = true,
     colors = true,
+    type_colors = false,
     diagnostics = true,
     picker = 'auto',
     search = { max_pages = 3 },
@@ -39,6 +40,7 @@ local function validate(cfg)
   vim.validate('max_age_days', cfg.max_age_days, 'number')
   vim.validate('inlay_hints', cfg.inlay_hints, 'boolean')
   vim.validate('colors', cfg.colors, 'boolean')
+  vim.validate('type_colors', cfg.type_colors, 'boolean')
   vim.validate('diagnostics', cfg.diagnostics, 'boolean')
   vim.validate('picker', cfg.picker, function(v)
     return (type(v) == 'string' and PICKERS[v] ~= nil) or (type(v) == 'table' and type(v.pick) == 'function')

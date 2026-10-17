@@ -4,6 +4,7 @@ local data = require('scryvim.data')
 local parse = require('scryvim.parse')
 local render = require('scryvim.render')
 local sort = require('scryvim.sort')
+local types = require('scryvim.types')
 
 local M = {}
 
@@ -111,6 +112,9 @@ function M.create(dispatchers)
         publish(uri)
       end
       pcall(dispatchers.server_request, 'workspace/inlayHint/refresh', nil)
+      if config.get().type_colors then
+        pcall(dispatchers.server_request, 'workspace/semanticTokens/refresh', nil)
+      end
     end)
   end)
 
@@ -165,6 +169,12 @@ function M.create(dispatchers)
       inlayHintProvider = not colored,
       codeActionProvider = { codeActionKinds = { 'refactor.rewrite' } },
     }
+    if config.get().type_colors then
+      capabilities.semanticTokensProvider = {
+        legend = { tokenTypes = types.TYPES, tokenModifiers = {} },
+        full = true,
+      }
+    end
     return {
       capabilities = capabilities,
       serverInfo = { name = 'scryvim', version = require('scryvim.http').version },
@@ -238,6 +248,27 @@ function M.create(dispatchers)
       end
     end
     return hints
+  end
+
+  -- Card names, typed by their card type.
+  handlers['textDocument/semanticTokens/full'] = function(params)
+    local lines = docs[params.textDocument.uri]
+    local out = {}
+    if not lines or not data.ready() or not config.get().type_colors then
+      return { data = out }
+    end
+    local prev_line, prev_start = 0, 0
+    for row = 0, #lines - 1 do
+      local parsed, card = card_at(lines, row)
+      local t = card and types.of(card)
+      if t then
+        local s, e = parsed.name_range[1], parsed.name_range[2]
+        local delta_start = row == prev_line and s - prev_start or s
+        vim.list_extend(out, { row - prev_line, delta_start, e - s, types.INDEX[t], 0 })
+        prev_line, prev_start = row, s
+      end
+    end
+    return { data = out }
   end
 
   handlers['textDocument/codeAction'] = function(params)

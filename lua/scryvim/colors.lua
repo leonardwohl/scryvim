@@ -141,14 +141,56 @@ local PALETTE = {
   },
 }
 
---- Define the default highlight groups. Existing definitions win, so
---- colorschemes and user config can override any of them.
+-- Where each color comes from in the current colorscheme, best first: a
+-- slot of the terminal palette (`g:terminal_color_N`, which is also the cterm
+-- color number), or a highlight group's foreground. Terminal colors come
+-- first: colorschemes set them to their own red, green, ..., while
+-- many leave the diagnostic groups at Neovim's defaults.
+local SOURCES = {
+  white = { 'Normal' },
+  blue = { 4, 'DiagnosticInfo' },
+  black = { 5 },
+  red = { 1, 'DiagnosticError' },
+  green = { 2, 'DiagnosticOk' },
+  multicolor = { 3, 'DiagnosticWarn' },
+  colorless = { 8, 'Comment' },
+}
+
+local function from_source(src)
+  if type(src) == 'number' then
+    local hex = vim.g['terminal_color_' .. src]
+    if type(hex) == 'string' and hex:match('^#%x%x%x%x%x%x$') then
+      return hex, src
+    end
+    return nil, src
+  end
+  local hl = vim.api.nvim_get_hl(0, { name = src, link = false })
+  return hl.fg and ('#%06x'):format(hl.fg), hl.ctermfg
+end
+
+--- `{ fg, ctermfg }` for a color: the first source the colorscheme defines,
+--- else the built-in palette.
+---@param color string
+---@return { [1]: string, [2]: integer }
+function M.theme_color(color)
+  local fallback = (PALETTE[vim.o.background] or PALETTE.dark)[color]
+  local fg, ctermfg
+  for _, src in ipairs(SOURCES[color]) do
+    local f, c = from_source(src)
+    fg, ctermfg = fg or f, ctermfg or c
+  end
+  return { fg or fallback[1], ctermfg or fallback[2] }
+end
+
+--- Define the default highlight groups from the colorscheme. Existing
+--- definitions win, so colorschemes and user config can override any of
+--- them.
 function M.setup_highlights()
-  local palette = PALETTE[vim.o.background] or PALETTE.dark
   for _, color in ipairs(M.COLORS) do
-    local c = palette[color]
+    local c = M.theme_color(color)
     vim.api.nvim_set_hl(0, M.group(color), { default = true, fg = c[1], ctermfg = c[2] })
   end
+  require('scryvim.types').setup_highlights()
 end
 
 return M
