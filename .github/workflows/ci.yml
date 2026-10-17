@@ -20,7 +20,7 @@ jobs:
           version: ${{ matrix.neovim }}
       - uses: leafo/gh-actions-lua@v11
         with:
-          luaVersion: luajit-openresty
+          luaVersion: "5.1"
       - uses: leafo/gh-actions-luarocks@v5
       - run: luarocks install busted && luarocks install nlua
       - run: make test
