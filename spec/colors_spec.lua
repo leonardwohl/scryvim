@@ -71,4 +71,25 @@ describe('colors', function()
     assert.are.equal(tonumber('123456', 16), vim.api.nvim_get_hl(0, { name = 'ScryvimManaRed' }).fg)
     assert.is_not_nil(vim.api.nvim_get_hl(0, { name = 'ScryvimManaBlue' }).fg)
   end)
+
+  it('takes mana colors from the colorscheme', function()
+    vim.api.nvim_set_hl(0, 'DiagnosticError', { fg = '#aa0000', ctermfg = 9 })
+    vim.api.nvim_set_hl(0, 'Normal', { fg = '#eeeeee' })
+    vim.g.terminal_color_5 = '#550055'
+    -- The terminal slot still gives the cterm color.
+    assert.are.same({ '#aa0000', 1 }, colors.theme_color('red'))
+    assert.are.same({ '#550055', 5 }, colors.theme_color('black'))
+    assert.are.equal('#eeeeee', colors.theme_color('white')[1])
+    -- The terminal palette wins over the diagnostic groups.
+    vim.g.terminal_color_1 = '#bb0000'
+    assert.are.same({ '#bb0000', 1 }, colors.theme_color('red'))
+    vim.g.terminal_color_1 = nil
+    -- Nothing defined: the built-in palette.
+    vim.g.terminal_color_5 = nil
+    vim.o.background = 'dark'
+    assert.are.same({ '#b48ead', 5 }, colors.theme_color('black'))
+    vim.api.nvim_set_hl(0, 'ScryvimManaRed', {})
+    colors.setup_highlights()
+    assert.are.equal(tonumber('aa0000', 16), vim.api.nvim_get_hl(0, { name = 'ScryvimManaRed' }).fg)
+  end)
 end)

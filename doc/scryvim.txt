@@ -94,7 +94,9 @@ scryvim runs an in-process language server named `scryvim`, enabled for the
 - hover with the card's Oracle text (|vim.lsp.buf.hover()|),
 - mana costs as inlay hints (|lsp-inlay_hint|),
 - a "Sort by mana value" code action (|vim.lsp.buf.code_action()|),
-- warnings for unknown card names (|vim.diagnostic|).
+- warnings for unknown card names (|vim.diagnostic|),
+- with `type_colors` on, card names colored by card type
+  (|lsp-semantic_tokens|, see |scryvim-type-colors|).
 
 ==============================================================================
 6. CONFIGURATION                                              *scryvim-config*
@@ -107,6 +109,7 @@ wins. `setup()` is optional. Defaults: >lua
       max_age_days  = 7,        -- refresh in the background after this
       inlay_hints   = true,
       colors        = true,     -- see |scryvim-colors|
+      type_colors   = false,    -- see |scryvim-type-colors|
       diagnostics   = true,
       picker        = 'auto',   -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
       search        = { max_pages = 3 },   -- 175 cards per page
@@ -170,11 +173,54 @@ are drawn in a single color; each symbol uses `LspInlayHint` with the color
 group on top. Set `inlay_hints = false` to hide them entirely. The fzf-lua
 picker runs in a terminal, so it uses the groups' foreground colors.
 
-The defaults depend on 'background'. Override any group in your config or
-colorscheme, for example: >lua
+The default colors come from your colorscheme, so they follow it when you
+switch. Each color is taken from the first of these the colorscheme sets,
+falling back to a built-in palette for 'background':
+
+    White         |hl-Normal| foreground
+    Blue          `g:terminal_color_4`, then DiagnosticInfo
+    Black         `g:terminal_color_5` (magenta)
+    Red           `g:terminal_color_1`, then DiagnosticError
+    Green         `g:terminal_color_2`, then DiagnosticOk
+    Multicolor    `g:terminal_color_3` (yellow), then DiagnosticWarn
+    Colorless     `g:terminal_color_8` (bright black), then |hl-Comment|
+
+The terminal colors (|terminal-config|) are the colorscheme's own red,
+green, blue and so on, which is why they come first. Override any group in
+your config or colorscheme, for example: >lua
     vim.api.nvim_set_hl(0, 'ScryvimManaBlack', { fg = '#9a7fc0' })
 <
 With `colors = false`, mana costs are plain inlay hints and nothing else is
 colored.
+
+                                                        *scryvim-type-colors*
+With `type_colors = true`, the language server marks each card name with its
+card type as a semantic token (|lsp-semantic_tokens|), and Neovim colors the
+name with that type's highlight group. A card with several types uses the
+first that applies, in this order:
+
+    land, creature, artifact, enchantment, planeswalker, battle, instant,
+    sorcery
+
+so Dryad Arbor is a land and an Artifact Creature is a creature. Multi-face
+cards use their front face. Cards with none of these types (tokens, emblems)
+and unknown cards are not colored.
+
+Each type's group links by default to a group your colorscheme already
+styles:
+
+    @lsp.type.land.deck           String
+    @lsp.type.creature.deck       Type
+    @lsp.type.artifact.deck       Constant
+    @lsp.type.enchantment.deck    Function
+    @lsp.type.planeswalker.deck   Statement
+    @lsp.type.battle.deck         Special
+    @lsp.type.instant.deck        Identifier
+    @lsp.type.sorcery.deck        PreProc
+
+Relink or recolor any of them: >lua
+    vim.api.nvim_set_hl(0, '@lsp.type.land.deck', { link = 'Comment' })
+<
+Changing `type_colors` takes effect after restarting Neovim.
 
 vim:tw=78:ts=8:ft=help:norl:

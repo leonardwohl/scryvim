@@ -5,7 +5,8 @@ Neovim plugin for building Magic: The Gathering decks in plain-text decklists, b
 - Card name completion through LSP, so it works with any completion engine.
 - `:Scryvim search <query>` opens a fuzzy picker over a Scryfall search and inserts the chosen cards.
 - Mana costs as inlay hints; full card text on hover.
-- Mana symbols colored by color in mana costs, hover and picker previews (`:h scryvim-colors`).
+- Mana symbols colored by color in mana costs, hover and picker previews, using your colorscheme's colors (`:h scryvim-colors`).
+- Optionally, card names colored by card type (`type_colors = true`).
 - `:Scryvim sort` orders cards by mana value.
 
 Lookups use a local copy of Scryfall's Oracle Cards bulk data, so nothing hits the network while you type.
@@ -65,6 +66,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   max_age_days  = 7,
   inlay_hints   = true,
   colors        = true,
+  type_colors   = false,
   diagnostics   = true,
   picker        = 'auto',      -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },
