@@ -365,15 +365,18 @@ function M.create(dispatchers)
         if notify_reply_callback then
           notify_reply_callback(id)
         end
+        -- Newer clients read the request id from the third argument (the
+        -- semantic token highlighter drops responses without it).
         local handler = handlers[method]
         if not handler then
-          return callback({ code = vim.lsp.protocol.ErrorCodes.MethodNotFound, message = 'unsupported: ' .. method })
+          local err = { code = vim.lsp.protocol.ErrorCodes.MethodNotFound, message = 'unsupported: ' .. method }
+          return callback(err, nil, id)
         end
         local ok, result = pcall(handler, params)
         if ok then
-          callback(nil, result)
+          callback(nil, result, id)
         else
-          callback({ code = vim.lsp.protocol.ErrorCodes.InternalError, message = tostring(result) })
+          callback({ code = vim.lsp.protocol.ErrorCodes.InternalError, message = tostring(result) }, nil, id)
         end
       end)
       return true, id
