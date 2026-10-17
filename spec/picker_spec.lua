@@ -33,6 +33,31 @@ describe('picker', function()
     )
   end)
 
+  it('applies many picks as one change and one undo step', function()
+    local buf = buffer({ 'Deck', '4 Opt', '', 'Sideboard', '1 Duress' }, 2)
+    -- Setting 'undolevels' closes the undo block of the setup lines.
+    vim.bo[buf].undolevels = vim.bo[buf].undolevels
+    local changes = 0
+    vim.api.nvim_buf_attach(buf, false, {
+      on_lines = function()
+        changes = changes + 1
+      end,
+    })
+    local cards = { card('Opt'), card('Duress') }
+    for i = 1, 20 do
+      cards[#cards + 1] = card('Card ' .. i)
+    end
+    picker.insert(buf, 2, cards)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert.are.equal(1, changes)
+    assert.are.equal('5 Opt', lines[2])
+    assert.are.equal('1 Card 1', lines[3])
+    assert.are.equal('1 Card 20', lines[22])
+    assert.are.same({ '', 'Sideboard', '2 Duress' }, vim.list_slice(lines, 23))
+    vim.cmd('undo')
+    assert.are.same({ 'Deck', '4 Opt', '', 'Sideboard', '1 Duress' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  end)
+
   it('matches multi-face cards by front face', function()
     local buf = buffer({ '1 Delver of Secrets' })
     picker.insert(buf, 1, {
@@ -50,8 +75,9 @@ describe('picker', function()
       if #urls == 1 then
         cb(nil, {
           data = { { name = 'Bolt', prices = {} } },
+          total_cards = 1000,
           has_more = true,
-          next_page = 'https://api.scryfall.com/cards/search?page=2',
+          next_page = 'https://api.scryfall.com/cards/search?page=2&q=x',
         })
       else
         cb(nil, { data = { { name = 'Shock' } }, has_more = true, next_page = 'never' })
@@ -59,7 +85,7 @@ describe('picker', function()
     end
     local seen
     vim.g.scryvim = {
-      search = { max_pages = 2 },
+      search = { max_pages = 3 },
       picker = {
         pick = function(items, opts)
           seen = items
@@ -70,15 +96,19 @@ describe('picker', function()
       },
     }
     local buf = buffer({ '1 Opt' })
+    local notify = vim.notify
+    vim.notify = function() end
     picker.search('t:instant c:r')
+    vim.notify = notify
     http.get_json = orig
     vim.g.scryvim = nil
 
-    assert.are.same(
-      { 'https://api.scryfall.com/cards/search?q=t%3Ainstant%20c%3Ar', 'https://api.scryfall.com/cards/search?page=2' },
-      urls
-    )
-    assert.are.same({ { name = 'Bolt' }, { name = 'Shock' } }, seen)
+    assert.are.same({
+      'https://api.scryfall.com/cards/search?q=t%3Ainstant%20c%3Ar',
+      'https://api.scryfall.com/cards/search?page=2&q=x',
+      'https://api.scryfall.com/cards/search?page=3&q=x',
+    }, urls)
+    assert.are.same({ { name = 'Bolt' }, { name = 'Shock' }, { name = 'Shock' } }, seen)
     assert.are.same({ '1 Opt', '1 Shock' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
   end)
 

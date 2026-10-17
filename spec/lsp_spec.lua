@@ -163,3 +163,77 @@ describe('lsp', function()
     assert.are.equal('Unknown card: Not A Real Card', d.message)
   end)
 end)
+
+describe('lsp while card data downloads', function()
+  it('reports progress and explains empty hovers', function()
+    helpers.block_network()
+    local dir = helpers.load_fixture()
+    local data = require('scryvim.data')
+    data._reset()
+    vim.g.scryvim = { cache_dir = dir, auto_download = false }
+    local http = require('scryvim.http')
+    local get_json, download = http.get_json, http.download
+    local finish_download
+    http.get_json = function(_, cb)
+      cb(nil, { jsonl_download_uri = 'https://data.example/x.jsonl.gz', updated_at = 'u' })
+    end
+    http.download = function(_, path, cb)
+      vim.uv.fs_copyfile(helpers.fixture, path)
+      finish_download = cb
+    end
+
+    local progress, requests = {}, {}
+    local server = require('scryvim.lsp').create({
+      notification = function(method, params)
+        if method == '$/progress' then
+          progress[#progress + 1] = params.value.kind .. ':' .. (params.value.message or '')
+        end
+      end,
+      server_request = function(method)
+        requests[#requests + 1] = method
+        return nil, vim.NIL
+      end,
+      on_exit = function() end,
+      on_error = function() end,
+    })
+    local function call(method, params)
+      local res
+      server.request(method, params, function(_, r)
+        res = { r }
+      end)
+      assert(vim.wait(2000, function()
+        return res ~= nil
+      end))
+      return res[1]
+    end
+    server.notify('textDocument/didOpen', { textDocument = { uri = 'file:///x.deck', text = '4 Lightning Bolt\n' } })
+    data.update({ force = true })
+    assert(vim.wait(2000, function()
+      return finish_download ~= nil
+    end))
+    local hover = call('textDocument/hover', {
+      textDocument = { uri = 'file:///x.deck' },
+      position = { line = 0, character = 3 },
+    })
+    assert.are.equal('*scryvim: downloading card data from scryfall…*', hover.contents.value)
+
+    finish_download(nil)
+    assert(
+      vim.wait(5000, function()
+        return data.ready() and progress[#progress] and progress[#progress]:find('^end') ~= nil
+      end),
+      vim.inspect(progress)
+    )
+    http.get_json, http.download = get_json, download
+    server.terminate()
+
+    assert.are.same({
+      'begin:Checking Scryfall for new card data',
+      'report:Downloading card data from Scryfall',
+      'report:Building the card index',
+      'report:Loading card data',
+      'end:Card data ready',
+    }, progress)
+    assert.are.equal('window/workDoneProgress/create', requests[1])
+  end)
+end)

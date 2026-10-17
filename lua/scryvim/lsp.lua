@@ -9,6 +9,13 @@ local M = {}
 
 M.DIAGNOSTIC_DEBOUNCE_MS = 200
 
+M.STAGE_MESSAGES = {
+  checking = 'Checking Scryfall for new card data',
+  downloading = 'Downloading card data from Scryfall',
+  building = 'Building the card index',
+  loading = 'Loading card data',
+}
+
 local function split_lines(text)
   local lines = vim.split((text:gsub('\r', '')), '\n', { plain = true })
   if lines[#lines] == '' then
@@ -107,6 +114,43 @@ function M.create(dispatchers)
     end)
   end)
 
+  -- Card data progress, shown by any UI that displays LSP progress
+  -- (`vim.lsp.status()`, fidget.nvim, noice, snacks).
+  local progress_token
+  local progress_count = 0
+  local last_stage
+  local function report_stage(stage)
+    if closing or stage == last_stage then
+      return
+    end
+    last_stage = stage
+    if stage and not progress_token then
+      progress_count = progress_count + 1
+      progress_token = 'scryvim-data-' .. progress_count
+      pcall(dispatchers.server_request, 'window/workDoneProgress/create', { token = progress_token })
+      dispatchers.notification('$/progress', {
+        token = progress_token,
+        value = { kind = 'begin', title = 'scryvim', message = M.STAGE_MESSAGES[stage] },
+      })
+    elseif stage then
+      dispatchers.notification('$/progress', {
+        token = progress_token,
+        value = { kind = 'report', message = M.STAGE_MESSAGES[stage] },
+      })
+    elseif progress_token then
+      dispatchers.notification('$/progress', {
+        token = progress_token,
+        value = { kind = 'end', message = data.ready() and 'Card data ready' or 'Card data unavailable' },
+      })
+      progress_token = nil
+    end
+  end
+  local unprogress = data.on_progress(function(stage)
+    vim.schedule(function()
+      report_stage(stage)
+    end)
+  end)
+
   handlers['initialize'] = function()
     data.ensure()
     return {
@@ -158,6 +202,10 @@ function M.create(dispatchers)
   handlers['textDocument/hover'] = function(params)
     local parsed, card = card_at(docs[params.textDocument.uri], params.position.line)
     if not card then
+      local stage = data.stage()
+      if parsed and not data.ready() and stage then
+        return { contents = { kind = 'markdown', value = '*scryvim: ' .. M.STAGE_MESSAGES[stage]:lower() .. '…*' } }
+      end
       return nil
     end
     return {
@@ -234,6 +282,12 @@ function M.create(dispatchers)
   end
 
   local notifications = {
+    initialized = function()
+      -- An update may already be running (another buffer started it).
+      vim.schedule(function()
+        report_stage(data.stage())
+      end)
+    end,
     ['textDocument/didOpen'] = function(params)
       docs[params.textDocument.uri] = split_lines(params.textDocument.text)
       schedule_publish(params.textDocument.uri, 0)
@@ -257,6 +311,7 @@ function M.create(dispatchers)
     end
     closing = true
     unsubscribe()
+    unprogress()
     for uri in pairs(timers) do
       stop_timer(uri)
     end

@@ -60,7 +60,7 @@ end
 function M.info()
   local i = require('scryvim.data').info()
   local lines = {
-    ('cards:      %d%s'):format(i.count, i.updating and ' (updating)' or ''),
+    ('cards:      %d%s'):format(i.count, i.stage and (' (' .. i.stage .. ')') or ''),
     ('updated_at: %s'):format(i.updated_at or 'never'),
     ('cache age:  %s'):format(i.age_days and ('%.1f days'):format(i.age_days) or 'n/a'),
     ('cache dir:  %s'):format(i.cache_dir),

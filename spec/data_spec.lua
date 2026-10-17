@@ -103,6 +103,10 @@ describe('data', function()
       cb(nil)
     end
     data.index({})
+    local stages = {}
+    data.on_progress(function(stage)
+      stages[#stages + 1] = stage or 'idle'
+    end)
     local done, err = false, nil
     data.update({ force = true }, function(e)
       done, err = true, e
@@ -116,5 +120,67 @@ describe('data', function()
     assert.are.equal('Lightning Bolt', data.get('Lightning Bolt').name)
     assert.are.equal('new', data.read_meta().updated_at)
     assert.is_nil(vim.uv.fs_stat(data.paths().bulk))
+    assert.are.same({ 'checking', 'downloading', 'building', 'loading', 'idle' }, stages)
+  end)
+
+  it('loads without blocking, keeping the old store until done', function()
+    local path = vim.fn.tempname()
+    local lines = { '[' }
+    for i = 1, 20000 do
+      lines[#lines + 1] = vim.json.encode({ name = 'Card ' .. i, cmc = i % 7, oracle_text = ('text '):rep(20) }) .. ','
+    end
+    lines[#lines + 1] = vim.json.encode({ name = 'Lightning Bolt', cmc = 1 })
+    lines[#lines + 1] = ']'
+    vim.fn.writefile(lines, path)
+    data.index({ { name = 'Old Card' } })
+    local done, err = false, nil
+    data.LOAD_SLICE_MS = 1
+    data.load_file_async(path, function(e)
+      done, err = true, e
+    end)
+    assert.are.equal('Old Card', data.get('old card').name)
+    -- A libuv timer only fires while the loop is free between slices.
+    local ticks = 0
+    local timer = assert(vim.uv.new_timer())
+    timer:start(1, 1, function()
+      ticks = ticks + 1
+    end)
+    assert(vim.wait(5000, function()
+      return done
+    end, 1))
+    timer:close()
+    data.LOAD_SLICE_MS = 8
+    assert.is_nil(err)
+    assert.is_true(ticks > 3, 'load should have yielded to the event loop')
+    assert.are.equal('Lightning Bolt', data.get('lightning bolt').name)
+    assert.are.equal(20001, data.info().count)
+    assert.is_nil(data.get('Old Card'))
+  end)
+
+  it('still loads a single-line cards.json from older versions', function()
+    local path = vim.fn.tempname()
+    vim.fn.writefile({ vim.json.encode({ { name = 'Legacy Card', cmc = 1 } }) }, path)
+    local done = false
+    data.load_file_async(path, function()
+      done = true
+    end)
+    assert(vim.wait(2000, function()
+      return done
+    end))
+    assert.are.equal('Legacy Card', data.get('legacy card').name)
+  end)
+
+  it("prefers a card's own name over another card's front face", function()
+    data.index({
+      { name = 'Bolt // Other', card_faces = { { name = 'Bolt' }, { name = 'Other' } } },
+      { name = 'Bolt' },
+    })
+    assert.are.equal('Bolt', data.get('bolt').name)
+    assert.are.same(
+      { 'Bolt', 'Bolt // Other' },
+      vim.tbl_map(function(c)
+        return c.name
+      end, data.complete('bolt'))
+    )
   end)
 end)

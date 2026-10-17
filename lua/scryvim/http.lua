@@ -59,7 +59,7 @@ end
 function M.get_json(url, cb)
   throttle(url, function()
     M._system(
-      curl(url, { '-w', '\n%{http_code}' }),
+      curl(url, { '--compressed', '-w', '\n%{http_code}' }),
       vim.schedule_wrap(function(res)
         if res.code ~= 0 then
           return cb('curl failed: ' .. vim.trim(res.stderr or ''))
