@@ -11,6 +11,7 @@ CONTENTS                                                    *scryvim-contents*
   6. Configuration ............................ |scryvim-config|
   7. Card data ................................ |scryvim-data|
   8. Lua API .................................. |scryvim-api|
+  9. Colors ................................... |scryvim-colors|
 
 ==============================================================================
 1. INTRODUCTION                                                *scryvim-intro*
@@ -93,7 +94,8 @@ scryvim runs an in-process language server named `scryvim`, enabled for the
 - hover with the card's Oracle text (|vim.lsp.buf.hover()|),
 - mana costs as inlay hints (|lsp-inlay_hint|),
 - a "Sort by mana value" code action (|vim.lsp.buf.code_action()|),
-- warnings for unknown card names (|vim.diagnostic|).
+- warnings for unknown card names (|vim.diagnostic|),
+- card names colored by color identity (|lsp-semantic-highlight|).
 
 ==============================================================================
 6. CONFIGURATION                                              *scryvim-config*
@@ -105,6 +107,7 @@ wins. `setup()` is optional. Defaults: >lua
       auto_download = true,     -- fetch card data on first use
       max_age_days  = 7,        -- refresh in the background after this
       inlay_hints   = true,
+      colors        = true,     -- see |scryvim-colors|
       diagnostics   = true,
       picker        = 'auto',   -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
       search        = { max_pages = 3 },   -- 175 cards per page
@@ -129,6 +132,9 @@ in progress UIs such as fidget.nvim. Hovering a card meanwhile says which
 step is running. Loading happens in small slices, so the editor stays
 responsive.
 
+Caches built by older scryvim versions are used as they are and rebuilt in
+the background, since they lack fields newer features need.
+
 When the cache is older than `max_age_days`, it is used immediately and
 refreshed in the background. A failed update leaves the existing cache in
 place; the error is shown in |:checkhealth|.
@@ -144,4 +150,34 @@ require('scryvim').sort({buf}, {first}, {last})
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
 
- vim:tw=78:ts=8:ft=help:norl:
+ ==============================================================================
+9. COLORS                                                    *scryvim-colors*
+
+With `colors` on, card names are colored by the card's color identity, and
+each mana symbol in the mana cost after a card is colored by its color. The
+count and set code keep the normal text color.
+
+Card names are LSP semantic tokens (|lsp-semantic-highlight|). The token type
+is one of `white`, `blue`, `black`, `red`, `green`, `multicolor` or
+`colorless`; lands also carry the `land` modifier. Each type links to a
+scryvim group:
+
+    @lsp.type.{color}.deck  ->  ScryvimWhite, ScryvimBlue, ScryvimBlack,
+                                ScryvimRed, ScryvimGreen,
+                                ScryvimMulticolor, ScryvimColorless
+
+Mana costs replace the inlay hints, since inlay hints are drawn in a single
+color. Each symbol uses `LspInlayHint` with one of `ScryvimManaWhite`,
+`ScryvimManaBlue`, ... on top; these link to the groups above. Hybrid
+symbols such as `{U/B}` are multicolor; generic, `{X}` and `{C}` symbols are
+colorless. Set `inlay_hints = false` to hide mana costs entirely.
+
+The defaults depend on 'background'. Override any group in your config or
+colorscheme, for example: >lua
+    vim.api.nvim_set_hl(0, 'ScryvimBlack', { fg = '#9a7fc0' })
+    vim.api.nvim_set_hl(0, '@lsp.typemod.blue.land.deck', { fg = '#5aa9e6', italic = true })
+<
+With `colors = false`, names use the normal text color and mana costs are
+plain inlay hints.
+
+vim:tw=78:ts=8:ft=help:norl:

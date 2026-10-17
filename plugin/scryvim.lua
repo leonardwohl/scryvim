@@ -42,12 +42,39 @@ vim.lsp.config('scryvim', {
 })
 vim.lsp.enable('scryvim')
 
+local group = vim.api.nvim_create_augroup('scryvim', { clear = true })
+
+require('scryvim.colors').setup_highlights()
+vim.api.nvim_create_autocmd('ColorScheme', {
+  group = group,
+  callback = function()
+    require('scryvim.colors').setup_highlights()
+  end,
+})
+
 vim.api.nvim_create_autocmd('LspAttach', {
-  group = vim.api.nvim_create_augroup('scryvim', { clear = true }),
+  group = group,
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if client and client.name == 'scryvim' and require('scryvim.config').get().inlay_hints then
+    local cfg = require('scryvim.config').get()
+    if not (client and client.name == 'scryvim' and cfg.inlay_hints) then
+      return
+    end
+    -- Colored mana costs replace the single-color inlay hints.
+    if cfg.colors then
+      require('scryvim.mana').attach(args.buf)
+    else
       vim.lsp.inlay_hint.enable(true, { bufnr = args.buf })
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd('LspDetach', {
+  group = group,
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.name == 'scryvim' then
+      require('scryvim.mana').detach(args.buf)
     end
   end,
 })

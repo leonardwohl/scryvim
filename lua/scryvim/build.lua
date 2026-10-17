@@ -19,6 +19,7 @@ local FIELDS = {
   'name',
   'mana_cost',
   'cmc',
+  'color_identity',
   'type_line',
   'oracle_text',
   'power',

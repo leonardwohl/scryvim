@@ -1,4 +1,5 @@
 --- In-process LSP server (see `:h lsp-server`).
+local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local data = require('scryvim.data')
 local parse = require('scryvim.parse')
@@ -111,6 +112,7 @@ function M.create(dispatchers)
         publish(uri)
       end
       pcall(dispatchers.server_request, 'workspace/inlayHint/refresh', nil)
+      pcall(dispatchers.server_request, 'workspace/semanticTokens/refresh', nil)
     end)
   end)
 
@@ -153,15 +155,26 @@ function M.create(dispatchers)
 
   handlers['initialize'] = function()
     data.ensure()
+    local colored = config.get().colors
+    local capabilities = {
+      positionEncoding = 'utf-8',
+      textDocumentSync = { openClose = true, change = 1 },
+      completionProvider = {},
+      hoverProvider = true,
+      -- With colors on, scryvim.mana draws the mana costs instead, so a
+      -- config that enables inlay hints for every server doesn't show them
+      -- twice.
+      inlayHintProvider = not colored,
+      codeActionProvider = { codeActionKinds = { 'refactor.rewrite' } },
+    }
+    if colored then
+      capabilities.semanticTokensProvider = {
+        legend = { tokenTypes = colors.TOKEN_TYPES, tokenModifiers = colors.TOKEN_MODIFIERS },
+        full = true,
+      }
+    end
     return {
-      capabilities = {
-        positionEncoding = 'utf-8',
-        textDocumentSync = { openClose = true, change = 1 },
-        completionProvider = {},
-        hoverProvider = true,
-        inlayHintProvider = true,
-        codeActionProvider = { codeActionKinds = { 'refactor.rewrite' } },
-      },
+      capabilities = capabilities,
       serverInfo = { name = 'scryvim', version = require('scryvim.http').version },
     }
   end
@@ -233,6 +246,30 @@ function M.create(dispatchers)
       end
     end
     return hints
+  end
+
+  -- Card names colored by color identity. Counts and set codes stay plain.
+  handlers['textDocument/semanticTokens/full'] = function(params)
+    local lines = docs[params.textDocument.uri]
+    local out = {}
+    if not lines then
+      return { data = out }
+    end
+    local prev_row = 0
+    for row = 0, #lines - 1 do
+      local parsed, card = card_at(lines, row)
+      local type_index, modifiers
+      if card then
+        type_index, modifiers = colors.token(card)
+      end
+      if type_index then
+        local s, e = parsed.name_range[1], parsed.name_range[2]
+        -- One token per line, so the start is always relative to column 0.
+        vim.list_extend(out, { row - prev_row, s, e - s, type_index, modifiers })
+        prev_row = row
+      end
+    end
+    return { data = out }
   end
 
   handlers['textDocument/codeAction'] = function(params)
@@ -328,15 +365,18 @@ function M.create(dispatchers)
         if notify_reply_callback then
           notify_reply_callback(id)
         end
+        -- Newer clients read the request id from the third argument (the
+        -- semantic token highlighter drops responses without it).
         local handler = handlers[method]
         if not handler then
-          return callback({ code = vim.lsp.protocol.ErrorCodes.MethodNotFound, message = 'unsupported: ' .. method })
+          local err = { code = vim.lsp.protocol.ErrorCodes.MethodNotFound, message = 'unsupported: ' .. method }
+          return callback(err, nil, id)
         end
         local ok, result = pcall(handler, params)
         if ok then
-          callback(nil, result)
+          callback(nil, result, id)
         else
-          callback({ code = vim.lsp.protocol.ErrorCodes.InternalError, message = tostring(result) })
+          callback({ code = vim.lsp.protocol.ErrorCodes.InternalError, message = tostring(result) }, nil, id)
         end
       end)
       return true, id
