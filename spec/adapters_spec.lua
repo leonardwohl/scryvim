@@ -95,7 +95,11 @@ suite('picker adapters (real plugins)', function()
       end)
       return preview ~= nil
     end, 'snacks preview not shown')
-    assert.truthy(vim.bo[preview].filetype:find('^markdown'))
+    -- Highlighted by treesitter directly, not snacks' markdown preview,
+    -- which makes closing the picker slow after many previews.
+    local hl = vim.treesitter.highlighter.active[preview]
+    assert.are.equal('markdown', hl and hl.tree:lang())
+    assert.is_nil(vim.bo[preview].filetype:find('markdown'))
     picker.list:select(picker:items()[1])
     picker.list:select(picker:items()[2])
     picker:action('confirm')
