@@ -160,8 +160,11 @@ shows them: the mana cost after each card line, the hover window, and the
 search picker's list and preview (snacks.nvim, telescope.nvim, fzf-lua).
 Card names, counts and set codes keep the normal text color.
 
-Hybrid symbols such as `{U/B}` count as multicolor; generic, `{X}`, `{C}`
-and `{T}` symbols as colorless. Each color has a highlight group:
+Hybrid symbols are split at the `/` and each half takes its own color:
+`{U/B}` shows `{U/` blue and `B}` black, and `{2/R}` shows `{2/` colorless
+and `R}` red. Phyrexian symbols take their color (`{G/P}` is green). Generic,
+`{X}`, `{C}` and `{T}` symbols are colorless. Each color has a highlight
+group:
 
     ScryvimManaWhite        ScryvimManaGreen
     ScryvimManaBlue         ScryvimManaMulticolor

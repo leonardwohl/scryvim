@@ -6,11 +6,15 @@ describe('colors', function()
       { 0, 3, 'colorless' },
       { 3, 6, 'colorless' },
       { 6, 9, 'white' },
-      { 9, 14, 'multicolor' },
+      { 9, 12, 'blue' },
+      { 12, 14, 'black' },
       { 14, 19, 'green' },
-      { 19, 24, 'red' },
+      { 19, 22, 'colorless' },
+      { 22, 24, 'red' },
       { 24, 27, 'colorless' },
-    }, colors.symbols('{X}{2}{W}{U/B}{G/P}{2/R}{C}'))
+      { 27, 30, 'white' },
+      { 30, 34, 'blue' },
+    }, colors.symbols('{X}{2}{W}{U/B}{G/P}{2/R}{C}{W/U/P}'))
     assert.are.same({ { 0, 3, 'colorless' }, { 9, 12, 'green' } }, colors.symbols('{T}: Add {G}. {not a symbol}'))
   end)
 
@@ -23,6 +27,37 @@ describe('colors', function()
       { '{U}', 'blue' },
     }, colors.mana_chunks('{1}{R} // {1}{U}'))
     assert.are.same({ { 'Bolt ' }, { '{R}', 'ScryvimManaRed' } }, colors.segments('Bolt {R}'))
+  end)
+
+  it('colors each half of a hybrid symbol on every path', function()
+    vim.api.nvim_set_hl(0, 'ScryvimManaWhite', { fg = '#ffffff' })
+    vim.api.nvim_set_hl(0, 'ScryvimManaBlue', { fg = '#0000ff' })
+    -- Inlay mana costs.
+    assert.are.same({ { '{W/', 'white' }, { 'U}', 'blue' } }, colors.mana_chunks('{W/U}'))
+    -- Picker list rows (snacks).
+    assert.are.same({ { '{W/', 'ScryvimManaWhite' }, { 'U}', 'ScryvimManaBlue' } }, colors.segments('{W/U}'))
+    -- Picker previews (snacks).
+    assert.are.same({
+      { row = 1, col = 0, end_col = 3, hl_group = 'ScryvimManaWhite' },
+      { row = 1, col = 3, end_col = 5, hl_group = 'ScryvimManaBlue' },
+    }, colors.extmarks('{W/U}'))
+    -- Picker previews (fzf-lua).
+    assert.are.equal('\27[38;2;255;255;255m{W/\27[39m\27[38;2;0;0;255mU}\27[39m', colors.ansi('{W/U}'))
+    -- Hover windows and telescope previews.
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '**Kitchen Finks**  {1}{G/W}{G/W}' })
+    colors.highlight_buf(buf)
+    local marks = {}
+    for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, colors.ns, 0, -1, { details = true })) do
+      marks[#marks + 1] = { m[3], m[4].end_col, m[4].hl_group }
+    end
+    assert.are.same({
+      { 19, 22, 'ScryvimManaColorless' },
+      { 22, 25, 'ScryvimManaGreen' },
+      { 25, 27, 'ScryvimManaWhite' },
+      { 27, 30, 'ScryvimManaGreen' },
+      { 30, 32, 'ScryvimManaWhite' },
+    }, marks)
   end)
 
   it('highlights symbols in a buffer', function()
