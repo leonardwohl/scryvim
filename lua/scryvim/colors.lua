@@ -20,12 +20,23 @@ end
 --- Mana and other card symbols in `text`: `{ start, end, color }` with
 --- 0-based, end-exclusive byte columns. Braces around anything that isn't a
 --- card symbol (`{foo}`) are skipped.
+---
+--- A hybrid symbol is split in two at its first `/`, each half in its own
+--- color: `{W/` white and `U}` blue, `{2/` colorless and `R}` red. A
+--- Phyrexian `/P` takes the color of the rest (`{G/P}` is green).
 ---@param text string
 ---@return { [1]: integer, [2]: integer, [3]: string }[]
 function M.symbols(text)
   local out = {}
   for s, sym, e in text:gmatch('(){([%dWUBRGCXYZSTQEPH/]+)}()') do
-    out[#out + 1] = { s - 1, e - 1, symbol_color(sym) }
+    local left, right = sym:match('^([^/]+)/(.+)$')
+    if left and right ~= 'P' then
+      local mid = s + #left + 1 -- just past the `/`
+      out[#out + 1] = { s - 1, mid, symbol_color(left) }
+      out[#out + 1] = { mid, e - 1, symbol_color(right) }
+    else
+      out[#out + 1] = { s - 1, e - 1, symbol_color(sym) }
+    end
   end
   return out
 end
