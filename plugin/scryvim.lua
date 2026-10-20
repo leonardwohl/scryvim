@@ -63,6 +63,17 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
+-- Live totals on `// count: <query>` lines.
+vim.api.nvim_create_autocmd('FileType', {
+  group = group,
+  pattern = 'deck',
+  callback = function(args)
+    if require('scryvim.config').get().counts then
+      require('scryvim.tally').attach(args.buf)
+    end
+  end,
+})
+
 vim.api.nvim_create_autocmd('LspAttach', {
   group = group,
   callback = function(args)
