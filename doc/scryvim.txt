@@ -22,7 +22,7 @@ scryvim helps you build decks in plain-text decklists:
 - a fuzzy picker over a Scryfall query that inserts the chosen cards,
 - mana costs as inlay hints and full card text on hover,
 - sorting cards by mana value,
-- counting the cards that match a Scryfall query.
+- counting the cards that match a Scryfall query, and mana symbols by color.
 
 Lookups use a local copy of Scryfall's Oracle Cards bulk data, so typing
 never hits the network; only search and count query Scryfall. scryvim is not
@@ -95,6 +95,26 @@ than counting as if the term weren't there. Example: >
     // count: t:creature                 18 cards
 <
 Turn this off with `counts = false`.
+
+:[range]Scryvim mana                                       *:Scryvim-mana*
+    Count the mana symbols in the cards' mana costs by type, by quantity,
+    to help work out how many sources each color needs. Covers the same
+    lines as |:Scryvim-count|. Counted locally; no network access.
+
+    Each symbol counts once for its type: white, blue, black, red, green,
+    colorless `{C}` and snow `{S}`. Generic mana (`{2}`, `{X}`) doesn't
+    count. Hybrid symbols split between their halves: `{R/G}` is 0.5 R and
+    0.5 G, and `{2/R}` is 0.5 R, since the generic half doesn't count.
+    Phyrexian symbols count half: `{R/P}` is 0.5 R, and `{G/W/P}` is 0.25 G
+    and 0.25 W. Cards with more than one mana cost (adventures, split and
+    modal double-faced cards) count each.
+
+                                                         *scryvim-mana-lines*
+A `// count mana symbols` (or `# count mana symbols`) line shows the same
+totals at its end, updated with the deck: >
+    // count mana symbols                {W} 12  {R} 23.5  {C} 2
+<
+They also turn off with `counts = false`.
 
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now.
@@ -179,6 +199,9 @@ require('scryvim').sort({buf}, {first}, {last})
                                           inclusive lines.
 require('scryvim').count({query}, {buf}, {first}, {last})
                                           Same as |:Scryvim-count|; 1-based
+                                          inclusive lines.
+require('scryvim').mana({buf}, {first}, {last})
+                                          Same as |:Scryvim-mana|; 1-based
                                           inclusive lines.
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.

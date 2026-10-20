@@ -94,6 +94,31 @@ function M.count(query, bufnr, first, last)
   end)
 end
 
+--- Count the mana symbols in the deck's mana costs, by type and quantity.
+--- Lines `first..last` (1-based, inclusive) when given, otherwise the whole
+--- buffer without Sideboard and Maybeboard.
+---@param bufnr? integer
+---@param first? integer
+---@param last? integer
+function M.mana(bufnr, first, last)
+  bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+  local data = require('scryvim.data')
+  local count = require('scryvim.count')
+  local symbols = require('scryvim.symbols')
+  data.ensure()
+  if not data.ready() then
+    vim.notify('scryvim: card data is not loaded yet', vim.log.levels.WARN)
+    return
+  end
+  local lines = vim.api.nvim_buf_get_lines(bufnr, first and first - 1 or 0, last or -1, false)
+  local entries = count.entries(lines, data.get, first ~= nil)
+  if #entries == 0 then
+    vim.notify('scryvim: no cards to count', vim.log.levels.WARN)
+    return
+  end
+  vim.notify('Mana symbols: ' .. symbols.format(symbols.entries(entries, data.get)), vim.log.levels.INFO)
+end
+
 --- Force a card data refresh.
 function M.update()
   require('scryvim.data').update({ force = true, announce = true })
@@ -132,6 +157,13 @@ M.subcommands = {
       M.count(query, 0)
     end
   end,
+  mana = function(o)
+    if o.range > 0 then
+      M.mana(0, o.line1, o.line2)
+    else
+      M.mana(0)
+    end
+  end,
   update = function()
     M.update()
   end,
@@ -145,7 +177,7 @@ function M.command(o)
   local sub = o.fargs[1]
   local fn = sub and M.subcommands[sub]
   if not fn then
-    vim.notify('scryvim: usage: :Scryvim {search|sort|count|update|info}', vim.log.levels.ERROR)
+    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|update|info}', vim.log.levels.ERROR)
     return
   end
   fn(o)
