@@ -64,6 +64,19 @@ suite('Scryfall (live)', function()
     assert.are.same({}, cards)
   end)
 
+  it('counts deck cards matching a query', function()
+    local err, result = await(function(cb)
+      require('scryvim.count').run('otag:removal or produces:r', {
+        { name = 'Mountain', count = 20 },
+        { name = 'Lightning Bolt', count = 4 },
+        { name = 'Island', count = 10 },
+        { name = '"Ach! Hans, Run!"', count = 1 },
+      }, cb)
+    end)
+    assert.is_nil(err)
+    assert.are.equal(24, result.total, vim.inspect(result))
+  end)
+
   it('surfaces Scryfall errors outside /cards/search', function()
     local err = await(function(cb)
       http.get_json('https://api.scryfall.com/cards/named?exact=zzqqxxnotacard', cb)
