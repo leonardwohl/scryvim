@@ -70,7 +70,7 @@ describe('count.batches', function()
 
   it('escapes quotes in names', function()
     assert.are.equal(
-      '(c:r) (!"\\"Ach! Hans, Run!\\"" or !"Mountain")',
+      '(c:r) (!\'"Ach! Hans, Run!"\' or !"Mountain")',
       count.build_query('c:r', { '"Ach! Hans, Run!"', 'Mountain' })
     )
   end)

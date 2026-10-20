@@ -49,7 +49,12 @@ function M.entries(lines, lookup, all)
   return out
 end
 
+-- Scryfall doesn't take `\"` inside a quoted name (it warns and drops the
+-- term), so a name with double quotes is single-quoted instead.
 local function exact(name)
+  if name:find('"', 1, true) and not name:find("'", 1, true) then
+    return "!'" .. name .. "'"
+  end
   return '!"' .. name:gsub('"', '\\"') .. '"'
 end
 
