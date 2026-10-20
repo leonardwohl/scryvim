@@ -82,6 +82,18 @@ Set codes and collector numbers are preserved but ignored for lookups.
     counting again after an edit only asks about new cards. Needs network
     access.
 
+                                                        *scryvim-count-lines*
+To keep counts in the deck, add comment lines of the form
+`// count <label>: <query>` (or `# count ...`). The label is optional and
+only for you. Each line shows its total at the end, counted like
+|:Scryvim-count| without a range, and updated a second after you stop
+typing. Query errors show on their line. Example: >
+    // count removal: otag:removal
+    // count red sources: produces:r
+    // count: t:creature
+<
+Turn this off with `counts = false`.
+
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now.
 
@@ -124,6 +136,7 @@ wins. `setup()` is optional. Defaults: >lua
       colors        = true,     -- see |scryvim-colors|
       type_colors   = false,    -- see |scryvim-type-colors|
       diagnostics   = true,
+      counts        = true,     -- see |scryvim-count-lines|
       picker        = 'auto',   -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
       search        = { max_pages = 3 },   -- 175 cards per page
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',

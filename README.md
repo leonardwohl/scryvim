@@ -8,7 +8,7 @@ Neovim plugin for building Magic: The Gathering decks in plain-text decklists, b
 - Mana symbols colored by color in mana costs, hover and picker previews, using your colorscheme's colors (`:h scryvim-colors`).
 - Optionally, card names colored by card type (`type_colors = true`).
 - `:Scryvim sort` orders cards by mana value.
-- `:Scryvim count <query>` counts the deck's cards that match any Scryfall query, such as `otag:removal` or `produces:r`.
+- `:Scryvim count <query>` counts the deck's cards that match any Scryfall query, such as `otag:removal` or `produces:r`. Keep counts in the deck with `// count removal: otag:removal` lines, which show their totals live.
 
 Lookups use a local copy of Scryfall's Oracle Cards bulk data, so nothing hits the network while you type.
 
@@ -38,6 +38,13 @@ Deck
 
 Sideboard
 SB: 2 Duress
+```
+
+Comment lines like these show how many cards in the deck match, by quantity, and update as you edit:
+
+```
+// count removal: otag:removal
+// count red sources: produces:r
 ```
 
 | Command | |
@@ -70,6 +77,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   colors        = true,
   type_colors   = false,
   diagnostics   = true,
+  counts        = true,
   picker        = 'auto',      -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
