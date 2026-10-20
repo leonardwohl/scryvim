@@ -19,7 +19,7 @@ vim.api.nvim_create_user_command('Scryvim', scryvim.command, {
   nargs = '+',
   range = true,
   complete = scryvim.complete,
-  desc = 'scryvim: search | sort | update | info',
+  desc = 'scryvim: search | sort | count | update | info',
 })
 
 vim.keymap.set('n', '<Plug>(scryvim-search)', function()

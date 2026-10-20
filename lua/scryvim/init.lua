@@ -52,6 +52,48 @@ function M.sort(bufnr, first, last)
   end
 end
 
+--- Count deck cards matching the Scryfall `query`, by quantity. Counts
+--- lines `first..last` (1-based, inclusive) when given, otherwise the whole
+--- buffer without Sideboard and Maybeboard.
+---@param query string
+---@param bufnr? integer
+---@param first? integer
+---@param last? integer
+function M.count(query, bufnr, first, last)
+  query = vim.trim(query or '')
+  if query == '' then
+    vim.notify('scryvim: usage: :Scryvim count {query}', vim.log.levels.ERROR)
+    return
+  end
+  bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+  local data = require('scryvim.data')
+  local count = require('scryvim.count')
+  data.ensure()
+  local lines = vim.api.nvim_buf_get_lines(bufnr, first and first - 1 or 0, last or -1, false)
+  local entries = count.entries(lines, data.get, first ~= nil)
+  if #entries == 0 then
+    vim.notify('scryvim: no cards to count', vim.log.levels.WARN)
+    return
+  end
+  count.run(query, entries, function(err, result)
+    if err then
+      vim.notify('scryvim: ' .. err, vim.log.levels.ERROR)
+      return
+    end
+    table.sort(result.matches, function(a, b)
+      if a.count ~= b.count then
+        return a.count > b.count
+      end
+      return a.name < b.name
+    end)
+    local out = { ('%d %s match %s'):format(result.total, result.total == 1 and 'card' or 'cards', query) }
+    for _, e in ipairs(result.matches) do
+      out[#out + 1] = ('%4d %s'):format(e.count, e.name)
+    end
+    vim.notify(table.concat(out, '\n'), vim.log.levels.INFO)
+  end)
+end
+
 --- Force a card data refresh.
 function M.update()
   require('scryvim.data').update({ force = true, announce = true })
@@ -82,6 +124,14 @@ M.subcommands = {
       M.sort(0)
     end
   end,
+  count = function(o)
+    local query = table.concat(vim.list_slice(o.fargs, 2), ' ')
+    if o.range > 0 then
+      M.count(query, 0, o.line1, o.line2)
+    else
+      M.count(query, 0)
+    end
+  end,
   update = function()
     M.update()
   end,
@@ -95,7 +145,7 @@ function M.command(o)
   local sub = o.fargs[1]
   local fn = sub and M.subcommands[sub]
   if not fn then
-    vim.notify('scryvim: usage: :Scryvim {search|sort|update|info}', vim.log.levels.ERROR)
+    vim.notify('scryvim: usage: :Scryvim {search|sort|count|update|info}', vim.log.levels.ERROR)
     return
   end
   fn(o)

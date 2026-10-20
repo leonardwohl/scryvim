@@ -21,10 +21,12 @@ scryvim helps you build decks in plain-text decklists:
 - card name completion (any LSP completion engine),
 - a fuzzy picker over a Scryfall query that inserts the chosen cards,
 - mana costs as inlay hints and full card text on hover,
-- sorting cards by mana value.
+- sorting cards by mana value,
+- counting the cards that match a Scryfall query.
 
-All lookups use a local copy of Scryfall's Oracle Cards bulk data, so typing
-never hits the network. scryvim is not produced by or endorsed by Scryfall.
+Lookups use a local copy of Scryfall's Oracle Cards bulk data, so typing
+never hits the network; only search and count query Scryfall. scryvim is not
+produced by or endorsed by Scryfall.
 
 ==============================================================================
 2. REQUIREMENTS                                         *scryvim-requirements*
@@ -68,6 +70,17 @@ Set codes and collector numbers are preserved but ignored for lookups.
     Sections, comments and blank lines divide blocks; each block is sorted
     on its own: spells by mana value then name, then lands by name, then
     unknown cards in their original order.
+
+:[range]Scryvim count {query}                             *:Scryvim-count*
+    Count the cards that match {query} (full Scryfall syntax), by quantity:
+    20 Mountains and 5 other red sources make 25 for `produces:r`. Without a
+    range, counts the whole buffer except Sideboard and Maybeboard sections
+    and `SB:` lines; with a range, counts every card line in it.
+
+    The query runs on Scryfall, limited to the deck's card names, in
+    batches of about 45 names. Results are kept for the session, so
+    counting again after an edit only asks about new cards. Needs network
+    access.
 
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now.
@@ -148,6 +161,9 @@ require('scryvim').setup({opts})          See |scryvim-config|.
 require('scryvim').search({query})        Same as |:Scryvim-search|.
 require('scryvim').sort({buf}, {first}, {last})
                                           Same as |:Scryvim-sort|; 1-based
+                                          inclusive lines.
+require('scryvim').count({query}, {buf}, {first}, {last})
+                                          Same as |:Scryvim-count|; 1-based
                                           inclusive lines.
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
