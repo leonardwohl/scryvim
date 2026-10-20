@@ -49,7 +49,12 @@ function M.entries(lines, lookup, all)
   return out
 end
 
+-- Scryfall doesn't take `\"` inside a quoted name (it warns and drops the
+-- term), so a name with double quotes is single-quoted instead.
 local function exact(name)
+  if name:find('"', 1, true) and not name:find("'", 1, true) then
+    return "!'" .. name .. "'"
+  end
   return '!"' .. name:gsub('"', '\\"') .. '"'
 end
 
@@ -88,7 +93,8 @@ function M.build_query(query, names)
 end
 
 --- Count the cards in `entries` that match `query`. Matches are cached per
---- query and card, so a recount only asks Scryfall about new cards.
+--- query and card, so a recount only asks Scryfall about new cards. A
+--- query with terms Scryfall ignores (an unknown keyword) is an error.
 --- `cb(err, result)` runs on the main loop.
 ---@param query string
 ---@param entries { name: string, count: integer }[]
@@ -128,8 +134,12 @@ function M.run(query, entries, cb)
   local pending, failed = #batches, nil
   for _, batch in ipairs(batches) do
     http.get_json(M.SEARCH_URL .. http.urlencode(M.build_query(query, batch)), function(gerr, obj)
-      if gerr then
-        failed = failed or gerr
+      -- Scryfall drops terms it can't parse and warns; without them a typo
+      -- like `prodces:r` would match the whole deck.
+      local warnings = obj and type(obj.warnings) == 'table' and #obj.warnings > 0 and obj.warnings
+      if gerr or warnings then
+        -- "... was ignored" no longer holds: the count is refused instead.
+        failed = failed or gerr or (table.concat(warnings, ' '):gsub(' was ignored%.', '.'))
       else
         -- At most a page's worth of cards per batch, so no paging.
         local found = {}

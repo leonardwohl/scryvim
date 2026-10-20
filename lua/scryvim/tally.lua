@@ -1,6 +1,6 @@
 --- Saved counts in the deck file: `// count <label>: <query>` comment lines
 --- show how many deck cards match their query, refreshed as the deck
---- changes. The label is optional and only for the reader.
+--- changes. The optional label names the total: `40 red sources`.
 local count = require('scryvim.count')
 local data = require('scryvim.data')
 
@@ -15,14 +15,24 @@ M.DEBOUNCE_MS = 1000
 -- Buffer -> { timer, generation, unsubscribe }.
 local attached = {} ---@type table<integer, table>
 
---- The query of a count line, or nil.
+--- The query and label of a count line, or nil.
 ---@param line string
----@return string|nil
+---@return string|nil query, string|nil label
 function M.query(line)
   local rest = line:match('^%s*//%s*(.*)$') or line:match('^%s*#%s*(.*)$')
-  local q = rest and (rest:match('^[Cc]ount:(.*)$') or rest:match('^[Cc]ount%s[^:]*:(.*)$'))
+  if not rest then
+    return nil
+  end
+  local label, q = nil, rest:match('^[Cc]ount:(.*)$')
+  if not q then
+    label, q = rest:match('^[Cc]ount%s([^:]*):(.*)$')
+  end
   q = q and vim.trim(q)
-  return q ~= '' and q or nil
+  if not q or q == '' then
+    return nil
+  end
+  label = label and vim.trim(label)
+  return q, label ~= '' and label or nil
 end
 
 local function mark(buf, row, text, hl)
@@ -45,9 +55,9 @@ function M.refresh(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local rows = {}
   for i, line in ipairs(lines) do
-    local q = M.query(line)
+    local q, label = M.query(line)
     if q then
-      rows[#rows + 1] = { row = i - 1, query = q }
+      rows[#rows + 1] = { row = i - 1, query = q, label = label }
     end
   end
   if #rows == 0 then
@@ -73,12 +83,8 @@ function M.refresh(buf)
         if res.err then
           mark(buf, row.row, res.err, 'DiagnosticError')
         else
-          mark(
-            buf,
-            row.row,
-            ('%d %s'):format(res.result.total, res.result.total == 1 and 'card' or 'cards'),
-            'LspInlayHint'
-          )
+          local total = res.result.total
+          mark(buf, row.row, ('%d %s'):format(total, row.label or (total == 1 and 'card' or 'cards')), 'LspInlayHint')
         end
       end
     end)
