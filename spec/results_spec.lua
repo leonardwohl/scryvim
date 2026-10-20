@@ -54,6 +54,8 @@ describe('results popup', function()
 
   before_each(function()
     vim.o.columns, vim.o.lines = 200, 50
+    -- Earlier specs can leave insert mode pending (telescope's prompt).
+    vim.api.nvim_feedkeys(vim.keycode('<Esc>'), 'nx', false)
     vim.cmd('silent! only! | enew!')
     origin = vim.api.nvim_get_current_win()
   end)

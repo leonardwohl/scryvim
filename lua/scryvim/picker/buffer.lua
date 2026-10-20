@@ -81,6 +81,8 @@ function M.pick(items, opts)
   list_cfg.footer_pos = 'center'
   local preview_win = vim.api.nvim_open_win(preview_buf, false, preview_cfg)
   local list_win = vim.api.nvim_open_win(list_buf, true, list_cfg)
+  -- The list is browsed in normal mode, even when search started from insert.
+  vim.cmd.stopinsert()
   vim.wo[list_win].cursorline = true
   vim.wo[list_win].signcolumn = 'yes:1'
   vim.wo[preview_win].wrap = true
