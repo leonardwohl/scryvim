@@ -3,7 +3,7 @@
 Neovim plugin for building Magic: The Gathering decks in plain-text decklists, backed by [Scryfall](https://scryfall.com) data.
 
 - Card name completion through LSP, so it works with any completion engine.
-- `:Scryvim search <query>` opens a fuzzy picker over a Scryfall search and inserts the chosen cards.
+- `:Scryvim search <query>` shows a Scryfall search in a popup you browse like any buffer (`j`/`k`, `/`), and inserts the cards you mark with `<Tab>` and add with `<CR>`.
 - Mana costs as inlay hints; full card text on hover.
 - Mana symbols colored by color in mana costs, hover and picker previews, using your colorscheme's colors (`:h scryvim-colors`).
 - Optionally, card names colored by card type (`type_colors = true`).
@@ -17,7 +17,7 @@ Lookups use a local copy of Scryfall's Oracle Cards bulk data, so nothing hits t
 
 - Neovim 0.11+
 - `curl` and `gzip`
-- Optional: [snacks.nvim](https://github.com/folke/snacks.nvim), [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or [fzf-lua](https://github.com/ibhagwan/fzf-lua) for the picker
+- Optional: [snacks.nvim](https://github.com/folke/snacks.nvim), [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or [fzf-lua](https://github.com/ibhagwan/fzf-lua), if you prefer a fuzzy picker for search results
 
 ## Install
 
@@ -53,7 +53,7 @@ A `// count mana symbols` line shows the deck's mana symbols by type, such as `{
 
 | Command | |
 |---|---|
-| `:Scryvim search [query]` | Scryfall search → picker → insert or increment |
+| `:Scryvim search [query]` | Scryfall search → results popup → insert or increment |
 | `:[range]Scryvim sort` | Sort by mana value (block under cursor without a range) |
 | `:[range]Scryvim count <query>` | Count cards matching a Scryfall query, by quantity (whole deck minus sideboard without a range) |
 | `:[range]Scryvim mana` | Count mana symbols in mana costs by type, by quantity (whole deck minus sideboard without a range) |
@@ -66,6 +66,8 @@ No default keymaps. `<Plug>(scryvim-search)` and `<Plug>(scryvim-sort)` are prov
 vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
 vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
 ```
+
+Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
 
 Hover (`K`), code actions (`gra`) and diagnostics come from the built-in LSP client.
 
@@ -83,7 +85,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   type_colors   = false,
   diagnostics   = true,
   counts        = true,
-  picker        = 'auto',      -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
+  picker        = 'buffer',    -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }

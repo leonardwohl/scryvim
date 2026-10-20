@@ -231,28 +231,46 @@ function M.search(query)
   local row = vim.api.nvim_win_get_cursor(0)[1]
   local cfg = config.get()
   vim.notify('scryvim: searching Scryfall for ' .. query .. '…', vim.log.levels.INFO)
+  local adapter = M.adapter(cfg.picker)
+  local pick_opts = {
+    prompt = 'Scryfall: ' .. query,
+    color = cfg.colors,
+    format_item = M.format_item,
+    preview = render.markdown,
+    on_choose = function(chosen)
+      if vim.api.nvim_buf_is_valid(bufnr) and #chosen > 0 then
+        M.insert(bufnr, row, chosen)
+      end
+    end,
+  }
+  -- Adapters whose pick() returns an `append` handle open on the first page
+  -- of results and take the rest as they arrive.
+  local handle
+  local on_page = adapter.streams
+    and function(cards, info)
+      if handle then
+        handle.append(cards, not info.last)
+      elseif #cards > 0 then
+        handle = adapter.pick(cards, vim.tbl_extend('force', pick_opts, { loading = not info.last }))
+      end
+    end
   M.fetch(query, cfg.search.max_pages, function(err, cards)
     if err then
       vim.notify('scryvim: search failed: ' .. err, vim.log.levels.WARN)
+    end
+    if handle then
+      handle.append({}, false)
+      return
+    end
+    if err then
       return
     end
     if #cards == 0 then
       vim.notify('scryvim: no cards match ' .. query, vim.log.levels.INFO)
       return
     end
-    local adapter = M.adapter(cfg.picker)
-    adapter.pick(cards, {
-      prompt = 'Scryfall: ' .. query,
-      color = cfg.colors,
-      format_item = M.format_item,
-      preview = render.markdown,
-      on_choose = function(chosen)
-        if vim.api.nvim_buf_is_valid(bufnr) and #chosen > 0 then
-          M.insert(bufnr, row, chosen)
-        end
-      end,
-    })
-  end)
+    adapter.pick(cards, pick_opts)
+  end, on_page or nil)
 end
 
 return M

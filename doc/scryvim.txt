@@ -19,7 +19,7 @@ CONTENTS                                                    *scryvim-contents*
 scryvim helps you build decks in plain-text decklists:
 
 - card name completion (any LSP completion engine),
-- a fuzzy picker over a Scryfall query that inserts the chosen cards,
+- a results popup for a Scryfall query that inserts the chosen cards,
 - mana costs as inlay hints and full card text on hover,
 - sorting cards by mana value,
 - counting the cards that match a Scryfall query, and mana symbols by color.
@@ -33,8 +33,8 @@ produced by or endorsed by Scryfall.
 
 - Neovim 0.11 or newer.
 - `curl` and `gzip` on $PATH.
-- Optional pickers: snacks.nvim, telescope.nvim, fzf-lua. Without one,
-  |vim.ui.select()| is used.
+- Optional fuzzy pickers for search results: snacks.nvim, telescope.nvim,
+  fzf-lua (see |scryvim-results|).
 
 Run |:checkhealth| scryvim to verify.
 
@@ -61,9 +61,30 @@ Set codes and collector numbers are preserved but ignored for lookups.
 
                                                                     *:Scryvim*
 :Scryvim search [query]                                  *:Scryvim-search*
-    Search Scryfall (full Scryfall syntax) and open the picker. Prompts for
-    a query when none is given. Chosen cards increment an existing line's
-    count, or are inserted as `1 <name>` below the cursor.
+    Search Scryfall (full Scryfall syntax) and show the results in a popup
+    (|scryvim-results|). Prompts for a query when none is given. Chosen
+    cards increment an existing line's count, or are inserted as
+    `1 <name>` below the cursor.
+
+                                                            *scryvim-results*
+    The results popup is an ordinary normal-mode buffer, one card per line,
+    with the card under the cursor previewed beside it. Move with `j`, `k`,
+    `gg`, `G`, `<C-d>` or any other motion, and search with `/`, `?`, `n`
+    and `N`. In the popup:
+
+      <Tab>       mark or unmark the card and move down
+      <S-Tab>     mark or unmark the card and move up
+      {Visual}<Tab>
+                  mark or unmark the selected cards
+      <CR>        add the marked cards, or the card under the cursor when
+                  none are marked
+      {Visual}<CR>
+                  add the selected cards
+      q  <Esc>    close without adding
+
+    Marks show in the sign column as `ScryvimPickMark` (linked to
+    |hl-Special|). Leaving the popup closes it. Set `picker` (see
+    |scryvim-config|) to use a fuzzy picker instead.
 
 :[range]Scryvim sort                                       *:Scryvim-sort*
     Sort by mana value. Without a range, sorts the block under the cursor.
@@ -159,11 +180,20 @@ wins. `setup()` is optional. Defaults: >lua
       type_colors   = false,    -- see |scryvim-type-colors|
       diagnostics   = true,
       counts        = true,     -- see |scryvim-count-lines|
-      picker        = 'auto',   -- 'snacks' | 'telescope' | 'fzf_lua' | 'select'
+      picker        = 'buffer', -- see below
       search        = { max_pages = 3 },   -- 175 cards per page
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <
+`picker` decides how search results are shown:
+
+    'buffer'      the built-in results popup, |scryvim-results|
+    'auto'        the first installed of snacks.nvim, telescope.nvim and
+                  fzf-lua, else |vim.ui.select()|
+    'snacks', 'telescope', 'fzf_lua'
+                  that fuzzy picker; <Tab> marks, <CR> adds
+    'select'      |vim.ui.select()|, one card at a time
+
 `picker` may also be a table with a `pick(items, opts)` function, where opts
 has `prompt`, `format_item(card)`, `preview(card)` (markdown) and
 `on_choose(cards)`.
@@ -211,7 +241,8 @@ require('scryvim').info()                 Same as |:Scryvim-info|.
 
 With `colors` on, mana symbols are colored by their color wherever scryvim
 shows them: the mana cost after each card line, the hover window, and the
-search picker's list and preview (snacks.nvim, telescope.nvim, fzf-lua).
+search results list and preview (the built-in popup, snacks.nvim,
+telescope.nvim, fzf-lua).
 Card names, counts and set codes keep the normal text color.
 
 Hybrid symbols are split at the `/` and each half takes its own color:
