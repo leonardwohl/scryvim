@@ -40,39 +40,108 @@ end
 
 M.PAGE_SIZE = 175
 
+--- Finished searches, so repeating one skips Scryfall. Searches are capped
+--- at `CACHE_SIZE` and expire after `CACHE_TTL_MS`; Scryfall itself tells
+--- clients to cache search results for hours.
+M.CACHE_SIZE = 20
+M.CACHE_TTL_MS = 30 * 60 * 1000
+local cache, cache_order = {}, {}
+
+function M._clear_cache()
+  cache, cache_order = {}, {}
+end
+
+local function cache_get(key)
+  local hit = cache[key]
+  if hit and vim.uv.now() - hit.at <= M.CACHE_TTL_MS then
+    return hit
+  end
+end
+
+local function cache_put(key, cards, total)
+  if not cache[key] then
+    cache_order[#cache_order + 1] = key
+    if #cache_order > M.CACHE_SIZE then
+      cache[table.remove(cache_order, 1)] = nil
+    end
+  end
+  cache[key] = { cards = cards, total = total, at = vim.uv.now() }
+end
+
 --- Page through `/cards/search`, up to `max_pages`. Once page 1 reports the
 --- total, the remaining pages are requested together; `http` still spaces
---- them out per Scryfall's rate limit, but their transfers overlap.
+--- them out per Scryfall's rate limit (500 ms apart), but their transfers
+--- overlap.
+---
+--- Since that spacing puts page 3 a second after page 1, `on_page` lets the
+--- caller show results as they come: it runs once per page, in page order,
+--- with that page's cards. A failed later page counts as empty; a failed
+--- page 1 only reaches `cb`. `cb` still gets
+--- every card once all pages are in. A repeated search is served from the
+--- cache, as one page with every card.
 ---@param query string
 ---@param max_pages integer
 ---@param cb fun(err: string|nil, cards: table[])
-function M.fetch(query, max_pages, cb)
-  local pages = {}
+---@param on_page? fun(cards: table[], info: { page: integer, last: boolean, total_cards: integer })
+function M.fetch(query, max_pages, cb, on_page)
+  local key = max_pages .. '\0' .. query
+  local hit = cache_get(key)
+  if hit then
+    if on_page then
+      on_page(vim.list_extend({}, hit.cards), { page = 1, last = true, total_cards = hit.total })
+    end
+    return cb(nil, vim.list_extend({}, hit.cards))
+  end
+
+  local pages, total, npages, delivered = {}, 0, 1, 0
+  local function deliver()
+    while pages[delivered + 1] do
+      delivered = delivered + 1
+      if on_page then
+        on_page(pages[delivered], { page = delivered, last = delivered == npages, total_cards = total })
+      end
+    end
+  end
   local function finish(err)
     local cards = {}
     for _, page in ipairs(pages) do
-      for _, card in ipairs(page) do
-        cards[#cards + 1] = build.strip(card)
-      end
+      vim.list_extend(cards, page)
     end
-    cb(err, cards)
+    if not err then
+      cache_put(key, cards, total)
+    end
+    cb(err, vim.list_extend({}, cards))
   end
+  local function strip(obj)
+    local out = {}
+    for i, card in ipairs(obj and obj.data or {}) do
+      out[i] = build.strip(card)
+    end
+    return out
+  end
+
   http.get_json(M.SEARCH_URL .. http.urlencode(query), function(err, first)
     if err then
       return finish(err)
     end
-    pages[1] = first.data or {}
+    total = first.total_cards or 0
     local next_page = first.has_more and first.next_page
-    local total = math.min(max_pages, math.ceil((first.total_cards or 0) / M.PAGE_SIZE))
-    if not next_page or total < 2 or not next_page:find('[?&]page=2') then
+    local wanted = math.min(max_pages, math.ceil(total / M.PAGE_SIZE))
+    if next_page and wanted >= 2 and next_page:find('[?&]page=2') then
+      npages = wanted
+    end
+    pages[1] = strip(first)
+    deliver()
+    if npages == 1 then
       return finish(nil)
     end
-    local pending, failed = total - 1, nil
-    for n = 2, total do
+    local pending, failed = npages - 1, nil
+    for n = 2, npages do
       local url = next_page:gsub('([?&]page=)2', '%1' .. n, 1)
       http.get_json(url, function(perr, obj)
         failed = failed or perr
-        pages[n] = obj and obj.data or {}
+        pages[n] = strip(obj)
+        deliver()
         pending = pending - 1
         if pending == 0 then
           finish(failed)
