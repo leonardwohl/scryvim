@@ -10,13 +10,13 @@ local function defaults()
     type_colors = false,
     diagnostics = true,
     counts = true,
-    picker = 'auto',
+    picker = 'buffer',
     search = { max_pages = 3 },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end
 
-local PICKERS = { auto = true, snacks = true, telescope = true, fzf_lua = true, select = true }
+local PICKERS = { buffer = true, auto = true, snacks = true, telescope = true, fzf_lua = true, select = true }
 
 local user_opts = {}
 
@@ -46,7 +46,7 @@ local function validate(cfg)
   vim.validate('counts', cfg.counts, 'boolean')
   vim.validate('picker', cfg.picker, function(v)
     return (type(v) == 'string' and PICKERS[v] ~= nil) or (type(v) == 'table' and type(v.pick) == 'function')
-  end, "one of 'auto', 'snacks', 'telescope', 'fzf_lua', 'select', or a table with pick()")
+  end, "one of 'buffer', 'auto', 'snacks', 'telescope', 'fzf_lua', 'select', or a table with pick()")
   vim.validate('search', cfg.search, 'table')
   vim.validate('search.max_pages', cfg.search.max_pages, 'number')
   vim.validate('cache_dir', cfg.cache_dir, 'string')

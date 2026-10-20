@@ -112,6 +112,38 @@ describe('picker', function()
     assert.are.same({ '1 Opt', '1 Shock' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
   end)
 
+  it('opens a streaming adapter on the first page and appends the rest', function()
+    local orig = picker.fetch
+    local finish
+    picker.fetch = function(_, _, cb, on_page)
+      on_page({ card('Bolt') }, { page = 1, last = false, total_cards = 3 })
+      on_page({ card('Shock'), card('Opt') }, { page = 2, last = true, total_cards = 3 })
+      finish = cb
+    end
+    local events = {}
+    vim.g.scryvim = {
+      picker = {
+        streams = true,
+        pick = function(items, opts)
+          events[#events + 1] = { 'pick', #items, opts.loading }
+          return {
+            append = function(cards, loading)
+              events[#events + 1] = { 'append', #cards, loading }
+            end,
+          }
+        end,
+      },
+    }
+    local notify = vim.notify
+    vim.notify = function() end
+    picker.search('t:instant')
+    finish(nil, { card('Bolt'), card('Shock'), card('Opt') })
+    vim.notify = notify
+    picker.fetch = orig
+    vim.g.scryvim = nil
+    assert.are.same({ { 'pick', 1, true }, { 'append', 2, false }, { 'append', 0, false } }, events)
+  end)
+
   it('resolves auto in order snacks, telescope, fzf-lua, then vim.ui.select', function()
     local orig = picker._available
     local installed = {}
