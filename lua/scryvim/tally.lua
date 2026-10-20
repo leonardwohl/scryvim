@@ -1,8 +1,12 @@
 --- Saved counts in the deck file: `// count <label>: <query>` comment lines
 --- show how many deck cards match their query, refreshed as the deck
 --- changes. The optional label names the total: `40 red sources`.
+--- `// count mana symbols` lines show the deck's mana symbols by type.
+local colors = require('scryvim.colors')
+local config = require('scryvim.config')
 local count = require('scryvim.count')
 local data = require('scryvim.data')
+local symbols = require('scryvim.symbols')
 
 local M = {}
 
@@ -35,12 +39,28 @@ function M.query(line)
   return q, label ~= '' and label or nil
 end
 
-local function mark(buf, row, text, hl)
+--- Whether `line` is a `// count mana symbols` line.
+---@param line string
+---@return boolean
+function M.is_mana(line)
+  local rest = line:match('^%s*//%s*(.-)%s*$') or line:match('^%s*#%s*(.-)%s*$')
+  return rest ~= nil and rest:lower():match('^count%s+mana%s+symbols$') ~= nil
+end
+
+local function mark(buf, row, virt_text)
   vim.api.nvim_buf_set_extmark(buf, M.ns, row, 0, {
-    virt_text = { { text, hl } },
+    virt_text = virt_text,
     virt_text_pos = 'eol',
     hl_mode = 'combine',
   })
+end
+
+local function mana_text(totals)
+  local color = config.get().colors
+  return vim.tbl_map(function(chunk)
+    local hl = chunk[2] and color and { 'LspInlayHint', colors.group(chunk[2]) } or 'LspInlayHint'
+    return { chunk[1], hl }
+  end, symbols.chunks(totals))
 end
 
 --- Recount every count line in `buf` now.
@@ -53,19 +73,48 @@ function M.refresh(buf)
   state.generation = state.generation + 1
   local generation = state.generation
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local rows = {}
+  local rows, mana_rows = {}, {}
   for i, line in ipairs(lines) do
     local q, label = M.query(line)
     if q then
       rows[#rows + 1] = { row = i - 1, query = q, label = label }
+    elseif M.is_mana(line) then
+      mana_rows[#mana_rows + 1] = i - 1
     end
   end
-  if #rows == 0 then
+  if #rows == 0 and #mana_rows == 0 then
     vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
     return
   end
   local entries = count.entries(lines, data.get)
-  local results, pending = {}, #rows
+  -- Mana symbols are counted locally, so they wait for the card data.
+  local mana = data.ready() and mana_text(symbols.entries(entries, data.get))
+  local results = {}
+
+  local function draw()
+    vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
+    for j, row in ipairs(rows) do
+      local res = results[j]
+      if res.err then
+        mark(buf, row.row, { { res.err, 'DiagnosticError' } })
+      else
+        local total = res.result.total
+        mark(buf, row.row, {
+          { ('%d %s'):format(total, row.label or (total == 1 and 'card' or 'cards')), 'LspInlayHint' },
+        })
+      end
+    end
+    if mana then
+      for _, row in ipairs(mana_rows) do
+        mark(buf, row, mana)
+      end
+    end
+  end
+
+  if #rows == 0 then
+    return draw()
+  end
+  local pending = #rows
   for i, r in ipairs(rows) do
     count.run(r.query, entries, function(err, result)
       results[i] = { err = err, result = result }
@@ -77,16 +126,7 @@ function M.refresh(buf)
       if not vim.api.nvim_buf_is_valid(buf) then
         return
       end
-      vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
-      for j, row in ipairs(rows) do
-        local res = results[j]
-        if res.err then
-          mark(buf, row.row, res.err, 'DiagnosticError')
-        else
-          local total = res.result.total
-          mark(buf, row.row, ('%d %s'):format(total, row.label or (total == 1 and 'card' or 'cards')), 'LspInlayHint')
-        end
-      end
+      draw()
     end)
   end
 end
