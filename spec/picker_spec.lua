@@ -16,6 +16,7 @@ end
 describe('picker', function()
   before_each(function()
     helpers.block_network()
+    picker._clear_cache()
   end)
 
   it('increments existing lines, keeping their style', function()
@@ -142,6 +143,121 @@ describe('picker', function()
     picker.fetch = orig
     vim.g.scryvim = nil
     assert.are.same({ { 'pick', 1, true }, { 'append', 2, false }, { 'append', 0, false } }, events)
+  end)
+
+  describe('fetch', function()
+    local http = require('scryvim.http')
+    local orig = http.get_json
+    local urls, replies
+
+    -- Page 1 answers at once; later pages wait until `reply(n)`.
+    local function serve(total, fail)
+      urls, replies = {}, {}
+      http.get_json = function(url, cb)
+        urls[#urls + 1] = url
+        local n = tonumber(url:match('[?&]page=(%d+)')) or 1
+        local obj = {
+          data = { { name = 'Card ' .. n, prices = {} } },
+          total_cards = total,
+          has_more = total > picker.PAGE_SIZE,
+          next_page = 'https://api.scryfall.com/cards/search?page=2&q=x',
+        }
+        if n == 1 then
+          cb(nil, obj)
+        else
+          replies[n] = function()
+            if fail == n then
+              cb('boom')
+            else
+              cb(nil, obj)
+            end
+          end
+        end
+      end
+    end
+
+    local function reply(n)
+      replies[n]()
+    end
+
+    after_each(function()
+      http.get_json = orig
+    end)
+
+    it('hands over pages in order as they arrive', function()
+      serve(1000)
+      local seen, done = {}, nil
+      picker.fetch('t:land', 3, function(err, cards)
+        done = { err = err, cards = cards }
+      end, function(cards, info)
+        seen[#seen + 1] = { cards[1].name, info.page, info.last, info.total_cards }
+      end)
+      assert.are.same({ { 'Card 1', 1, false, 1000 } }, seen)
+      reply(3)
+      assert.are.equal(1, #seen)
+      reply(2)
+      assert.are.same({ 'Card 2', 2, false, 1000 }, seen[2])
+      assert.are.same({ 'Card 3', 3, true, 1000 }, seen[3])
+      assert.is_nil(done.err)
+      assert.are.same({ { name = 'Card 1' }, { name = 'Card 2' }, { name = 'Card 3' } }, done.cards)
+    end)
+
+    it('marks a single page as the last', function()
+      serve(10)
+      local info
+      picker.fetch('ashling', 3, function() end, function(_, i)
+        info = i
+      end)
+      assert.are.same({ page = 1, last = true, total_cards = 10 }, info)
+      assert.are.equal(1, #urls)
+    end)
+
+    it('serves a repeated search from the cache', function()
+      serve(1000)
+      picker.fetch('t:land', 3, function() end)
+      reply(2)
+      reply(3)
+      assert.are.equal(3, #urls)
+      local cards, pages = nil, {}
+      picker.fetch('t:land', 3, function(err, c)
+        assert.is_nil(err)
+        cards = c
+      end, function(c, info)
+        pages[#pages + 1] = { #c, info }
+      end)
+      assert.are.equal(3, #urls)
+      assert.are.equal(3, #cards)
+      assert.are.same({ { 3, { page = 1, last = true, total_cards = 1000 } } }, pages)
+      -- A different page limit is a different search.
+      picker.fetch('t:land', 2, function() end)
+      assert.are.equal(5, #urls)
+    end)
+
+    it('does not cache a search with a failed page', function()
+      serve(1000, 2)
+      local seen, err = {}, nil
+      picker.fetch('t:land', 3, function(e)
+        err = e
+      end, function(cards, info)
+        seen[#seen + 1] = { #cards, info.page }
+      end)
+      reply(2)
+      reply(3)
+      assert.are.equal('boom', err)
+      assert.are.same({ { 1, 1 }, { 0, 2 }, { 1, 3 } }, seen)
+      picker.fetch('t:land', 3, function() end)
+      assert.are.equal(6, #urls)
+    end)
+
+    it('expires cached searches', function()
+      serve(10)
+      picker.fetch('a', 1, function() end)
+      local ttl = picker.CACHE_TTL_MS
+      picker.CACHE_TTL_MS = -1
+      picker.fetch('a', 1, function() end)
+      picker.CACHE_TTL_MS = ttl
+      assert.are.equal(2, #urls)
+    end)
   end)
 
   it('resolves auto in order snacks, telescope, fzf-lua, then vim.ui.select', function()
