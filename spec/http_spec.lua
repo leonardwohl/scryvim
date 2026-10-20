@@ -43,6 +43,10 @@ describe('http', function()
     local err, obj = get('https://api.scryfall.com/cards/search?q=zzzz')
     assert.is_nil(err)
     assert.are.same({}, obj.data)
+    -- Warnings about ignored terms survive.
+    respond('{"object":"error","code":"not_found","status":404,"warnings":["Unknown keyword"]}\n404')
+    _, obj = get('https://api.scryfall.com/cards/search?q=prodces:r')
+    assert.are.same({ 'Unknown keyword' }, obj.warnings)
   end)
 
   it('surfaces other Scryfall errors', function()

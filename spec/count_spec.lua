@@ -167,6 +167,21 @@ describe('count.run', function()
     assert.are.equal(2, #requests)
   end)
 
+  it('treats terms Scryfall ignored as an error', function()
+    http.get_json = function(_, cb)
+      vim.schedule(function()
+        cb(nil, {
+          object = 'list',
+          data = { { name = 'Mountain' } },
+          warnings = { 'Invalid expression “prodces:r” was ignored. Unknown keyword “prodces”.' },
+        })
+      end)
+    end
+    local err, result = run('prodces:r', { { name = 'Mountain', count = 20 } })
+    assert.is_nil(result)
+    assert.are.equal('Invalid expression “prodces:r”. Unknown keyword “prodces”.', err)
+  end)
+
   it('surfaces errors without caching', function()
     http.get_json = function(_, cb)
       vim.schedule(function()

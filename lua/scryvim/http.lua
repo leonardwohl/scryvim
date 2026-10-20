@@ -53,7 +53,8 @@ end
 --- GET a JSON endpoint. `cb(err, obj)` runs on the main loop.
 ---
 --- Scryfall error objects become `err`, except a 404 from `/cards/search`,
---- which means "no matches" and yields an empty list.
+--- which means "no matches" and yields an empty list (keeping any
+--- `warnings` about ignored query terms).
 ---@param url string
 ---@param cb fun(err: string|nil, obj: table|nil)
 function M.get_json(url, cb)
@@ -76,7 +77,7 @@ function M.get_json(url, cb)
         if obj.object == 'error' then
           local _, path = split_url(url)
           if status == 404 and path == '/cards/search' then
-            return cb(nil, { object = 'list', data = {}, has_more = false, total_cards = 0 })
+            return cb(nil, { object = 'list', data = {}, has_more = false, total_cards = 0, warnings = obj.warnings })
           end
           return cb(('Scryfall error (%s): %s'):format(obj.code or status, obj.details or 'unknown'))
         end

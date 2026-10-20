@@ -84,13 +84,15 @@ Set codes and collector numbers are preserved but ignored for lookups.
 
                                                         *scryvim-count-lines*
 To keep counts in the deck, add comment lines of the form
-`// count <label>: <query>` (or `# count ...`). The label is optional and
-only for you. Each line shows its total at the end, counted like
-|:Scryvim-count| without a range, and updated a second after you stop
-typing. Query errors show on their line. Example: >
-    // count removal: otag:removal
-    // count red sources: produces:r
-    // count: t:creature
+`// count <label>: <query>` (or `# count ...`). Each line shows its total
+at the end, named by the label (`40 red sources`), or `40 cards` without
+one. Totals are counted like |:Scryvim-count| without a range, and update
+a second after you stop typing. Query errors show on their line, including
+terms Scryfall doesn't understand, such as a misspelled keyword, rather
+than counting as if the term weren't there. Example: >
+    // count removal: otag:removal       12 removal
+    // count red sources: produces:r     40 red sources
+    // count: t:creature                 18 cards
 <
 Turn this off with `counts = false`.
 

@@ -4,9 +4,10 @@ local tally = require('scryvim.tally')
 
 describe('tally.query', function()
   it('reads count comment lines', function()
-    assert.are.equal('otag:removal', tally.query('// count: otag:removal'))
-    assert.are.equal('produces:r', tally.query('  // Count red sources:  produces:r '))
-    assert.are.equal('t:creature', tally.query('# count creatures: t:creature'))
+    assert.are.same({ 'otag:removal' }, { tally.query('// count: otag:removal') })
+    assert.are.same({ 'produces:r', 'red sources' }, { tally.query('  // Count red sources:  produces:r ') })
+    assert.are.same({ 't:creature', 'creatures' }, { tally.query('# count creatures: t:creature') })
+    assert.are.same({ 't:land' }, { tally.query('// count  : t:land') })
     assert.is_nil(tally.query('// counterspells: t:instant'))
     assert.is_nil(tally.query('// count:'))
     assert.is_nil(tally.query('4 Count of Monte Cristo: the card'))
@@ -34,8 +35,10 @@ describe('tally', function()
           out[#out + 1] = { name = name }
         end
       end
+      -- Like Scryfall, ignore an unknown keyword and warn about it.
+      local warnings = query:find('^%(prodces') and { 'Unknown keyword “prodces”.' } or nil
       vim.schedule(function()
-        cb(nil, { object = 'list', data = out })
+        cb(nil, { object = 'list', data = out, warnings = warnings })
       end)
     end
   end
@@ -80,7 +83,7 @@ describe('tally', function()
       '3 Mountain',
     })
     tally.attach(buf)
-    settle({ [0] = { '24 cards', 'LspInlayHint' } })
+    settle({ [0] = { '24 red sources', 'LspInlayHint' } })
   end)
 
   it('updates as the deck changes, asking only about new cards', function()
@@ -101,6 +104,12 @@ describe('tally', function()
       [0] = { 'Scryfall error (bad_request): bad query', 'DiagnosticError' },
       [1] = { '1 card', 'LspInlayHint' },
     })
+  end)
+
+  it('shows an unknown keyword as an error instead of counting everything', function()
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '// count red sources: prodces:r', '20 Mountain' })
+    tally.attach(buf)
+    settle({ [0] = { 'Unknown keyword “prodces”.', 'DiagnosticError' } })
   end)
 
   it('sends nothing without count lines and clears marks when they go', function()
