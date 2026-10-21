@@ -350,24 +350,29 @@ With `icons = true`, mana symbols show as Nerd Font icons
 mana costs after card lines, hover, the pane, count lines and search
 results. They are Material Design icons:
 
-    {W}  sun 󰖨          {C}  rhombus 󰜌       {0} to {10}  circled numbers
-    {U}  water drop 󰖌   {S}  snowflake 󰜗     {X}  circled X 󰰱
+    {W}  sun 󰖨          {C}  rhombus 󰜌
+    {U}  water drop 󰖌   {S}  snowflake 󰜗
     {B}  skull 󰚌        {P}  Φ
     {R}  fire 󰈸
     {G}  tree 󰔱
 
+Generic mana and `{X}` show as plain text without their braces: `{2}{R}` is
+2 󰈸. Nerd Font's circled numbers are drawn too small to read next to
+the other icons; to use them anyway, override them (see below).
+
 Each part of a hybrid or Phyrexian symbol gets its icon, keeping the slash:
 `{W/U}` is 󰖨/󰖌 and `{R/P}` is 󰈸/Φ. Symbols with a part that has no icon,
-such as `{T}`, `{15}` or `{HR}`, stay as text. Colors apply to the icons as
+such as `{T}` or `{HR}`, stay as text. Colors apply to the icons as
 they do to the text.
 
 Nerd Font icons draw wider than the one cell Neovim gives them, so a symbol
-followed by other text gets a space after it: `{1}{R}` is 󰲠 󰈸, not 󰲠󰈸.
+followed by other text gets a space after it: `{R}{R}` is 󰈸 󰈸, not 󰈸󰈸.
 
-`icons` may be a table of overrides, keyed by symbol part. `false` keeps that
-part as text. Use a single character, since buffers conceal the `{R}` text
-with it: >lua
+`icons` may be a table of overrides, keyed by symbol part. `true` shows the
+part as plain text and `false` keeps it as `{…}` text. Otherwise use a single
+character, since buffers conceal the `{R}` text with it: >lua
     icons = { R = '', P = false }  -- nf-fa-fire
+    icons = { ['1'] = '󰲠', ['2'] = '󰲢' }  -- nf-md-numeric_N_circle
 <
 In buffers the `{R}` text stays and is concealed (|conceal|), so it shows
 where 'conceallevel' is 0, and on the cursor line where 'concealcursor'
