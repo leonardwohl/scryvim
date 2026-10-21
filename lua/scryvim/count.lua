@@ -4,8 +4,10 @@
 --- `(<query>) (!"A" or !"B" ...)`. Results are matched back to deck entries
 --- by full name, since `!"Lightning Bolt"` also finds cards with a face of
 --- that name.
+local curve = require('scryvim.curve')
 local http = require('scryvim.http')
 local parse = require('scryvim.parse')
+local symbols = require('scryvim.symbols')
 
 local M = {}
 
@@ -42,6 +44,25 @@ function M.entries(lines, lookup, all)
     end
   end
   return out
+end
+
+--- Totals for the deck `entries`: `cards` by quantity, `lands` and the
+--- `mana` symbols by type. Without `lookup` (card data not loaded),
+--- `lands` and `mana` are nil.
+---@param entries { name: string, count: integer }[]
+---@param lookup? fun(name: string): table|nil
+---@return { cards: integer, lands: integer|nil, mana: table<string, number>|nil }
+function M.stats(entries, lookup)
+  local stats = { cards = 0, lands = lookup and 0 or nil }
+  for _, e in ipairs(entries) do
+    stats.cards = stats.cards + e.count
+    local card = lookup and lookup(e.name)
+    if card and curve.is_land(card) then
+      stats.lands = stats.lands + e.count
+    end
+  end
+  stats.mana = lookup and symbols.entries(entries, lookup) or nil
+  return stats
 end
 
 -- Scryfall doesn't take `\"` inside a quoted name (it warns and drops the

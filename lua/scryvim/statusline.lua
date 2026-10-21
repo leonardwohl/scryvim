@@ -9,7 +9,6 @@
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
-local curve = require('scryvim.curve')
 local data = require('scryvim.data')
 local render = require('scryvim.render')
 local symbols = require('scryvim.symbols')
@@ -57,15 +56,7 @@ function M.stats(buf)
     return hit.stats
   end
   local entries = count.entries(vim.api.nvim_buf_get_lines(buf, 0, -1, false), data.get)
-  local stats = { cards = 0, lands = ready and 0 or nil }
-  for _, e in ipairs(entries) do
-    stats.cards = stats.cards + e.count
-    local card = ready and data.get(e.name)
-    if card and curve.is_land(card) then
-      stats.lands = stats.lands + e.count
-    end
-  end
-  stats.mana = ready and symbols.entries(entries, data.get) or nil
+  local stats = count.stats(entries, ready and data.get or nil)
   cache[buf] = { tick = tick, ready = ready, stats = stats }
   return stats
 end

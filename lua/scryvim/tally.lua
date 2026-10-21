@@ -6,7 +6,6 @@
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
-local curve = require('scryvim.curve')
 local data = require('scryvim.data')
 local icons = require('scryvim.icons')
 local render = require('scryvim.render')
@@ -62,23 +61,19 @@ function M.is_cards(line)
   return is_special(line, '^count%s+cards$')
 end
 
+local function cards_text(stats)
+  local breakdown = stats.lands
+    and stats.cards > 0
+    and render.plural(stats.lands, 'land') .. '  ' .. render.plural(stats.cards - stats.lands, 'nonland')
+  return render.plural(stats.cards, 'card'), breakdown or nil
+end
+
 --- `60 cards` and `24 lands  36 nonlands` for the deck `entries`. The
 --- breakdown is nil until the card data is loaded, since lands need it.
 ---@param entries { name: string, count: integer }[]
 ---@return string total, string|nil breakdown
 function M.cards(entries)
-  local total, lands = 0, 0
-  for _, e in ipairs(entries) do
-    total = total + e.count
-    local card = data.ready() and data.get(e.name)
-    if card and curve.is_land(card) then
-      lands = lands + e.count
-    end
-  end
-  local breakdown = data.ready()
-    and total > 0
-    and render.plural(lands, 'land') .. '  ' .. render.plural(total - lands, 'nonland')
-  return render.plural(total, 'card'), breakdown or nil
+  return cards_text(count.stats(entries, data.ready() and data.get or nil))
 end
 
 local function mark(buf, row, virt_text)
@@ -123,9 +118,10 @@ function M.refresh(buf)
     return
   end
   local entries = count.entries(lines, data.get)
+  local stats = count.stats(entries, data.ready() and data.get or nil)
   -- Mana symbols are counted locally, so they wait for the card data.
-  local mana = data.ready() and mana_text(symbols.entries(entries, data.get))
-  local total, breakdown = M.cards(entries)
+  local mana = stats.mana and mana_text(stats.mana)
+  local total, breakdown = cards_text(stats)
   local cards = { { breakdown and total .. '  ' .. breakdown or total, 'LspInlayHint' } }
   local results = {}
 
