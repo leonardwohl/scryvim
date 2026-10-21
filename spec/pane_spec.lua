@@ -81,10 +81,15 @@ describe('pane', function()
     http.get_json = orig
   end)
 
-  it('shows the card on a card line, as in hover', function()
-    local text = content(3)
-    assert.are.equal('**Lightning Bolt**  {R}', text[1])
-    assert.are.equal('*Instant*', text[2])
+  it('shows the card on a card line, with more room than hover', function()
+    assert.are.same({
+      '**Lightning Bolt**  {R}',
+      '*Instant*',
+      '',
+      '---',
+      '',
+      'Lightning Bolt deals 3 damage to any target.',
+    }, content(3))
   end)
 
   it('lists the cards a count line counts, without the sideboard', function()
@@ -130,5 +135,49 @@ describe('pane', function()
     assert.is_false(pane.is_open())
     pane.open()
     assert.is_true(pane.is_open())
+  end)
+end)
+
+describe('render.markdown spacious', function()
+  local render = require('scryvim.render')
+
+  it('puts abilities in their own paragraphs and rules between faces', function()
+    local md = render.markdown({
+      card_faces = {
+        {
+          name = 'Front',
+          mana_cost = '{U}',
+          type_line = 'Creature',
+          oracle_text = 'One.\nTwo.',
+          power = '1',
+          toughness = '1',
+        },
+        { name = 'Back', type_line = 'Creature', oracle_text = 'Flying' },
+      },
+    }, { spacious = true })
+    assert.are.equal(
+      table.concat({
+        '**Front**  {U}',
+        '*Creature*',
+        '',
+        '---',
+        '',
+        'One.',
+        '',
+        'Two.',
+        '',
+        'P/T: 1/1',
+        '',
+        '---',
+        '',
+        '**Back**',
+        '*Creature*',
+        '',
+        '---',
+        '',
+        'Flying',
+      }, '\n'),
+      md
+    )
   end)
 end)

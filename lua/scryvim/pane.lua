@@ -1,5 +1,6 @@
 --- Preview pane: a split on the right of the tab that follows the cursor in
---- deck windows. A card line shows the card, as in hover. A count line lists
+--- deck windows. A card line shows the card, spaced out more than hover since
+--- the pane has the room. A count line lists
 --- the deck cards it counts, and a mana symbols line the cards with symbols.
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
@@ -61,7 +62,7 @@ function M.content(lines, row, cb)
     if not card then
       return cb({ '*Unknown card: ' .. parsed.name .. '*' })
     end
-    return cb(vim.split(render.markdown(card), '\n', { plain = true }))
+    return cb(vim.split(render.markdown(card, { spacious = true }), '\n', { plain = true }))
   end
 
   local entries = count.entries(lines, data.get)

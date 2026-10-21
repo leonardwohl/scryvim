@@ -71,7 +71,7 @@ vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 
 Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
 
-Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card as hover does, a count line lists the cards it counts, and a `// count mana symbols` line lists the cards with mana symbols. Set `pane = { auto_open = true }` to open it with every deck.
+Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, a count line lists the cards it counts, and a `// count mana symbols` line lists the cards with mana symbols. Set `pane = { auto_open = true }` to open it with every deck.
 
 Hover (`K`), code actions (`gra`) and diagnostics come from the built-in LSP client.
 
