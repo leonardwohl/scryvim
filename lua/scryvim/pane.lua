@@ -92,18 +92,24 @@ local function curve_lines(card, entries)
   for _, face in ipairs(faces) do
     local odds = deck.size > 0 and odds_for(deck, face.mana_cost or '')
     if odds then
-      local head = #faces > 1 and ('On curve: %s, turn %d'):format(face.name, odds.turn)
-        or ('On curve: turn %d'):format(odds.turn)
-      vim.list_extend(out, { '', '---', '', '**' .. head .. '**', '' })
+      local head = ('On curve (turn %d)'):format(odds.turn)
+      if #faces > 1 then
+        head = face.name .. ' on curve (turn ' .. odds.turn .. ')'
+      end
+      vim.list_extend(out, { '', '---', '' })
       local pool = odds.pool
       if pool.lands + pool.others == 0 then
         out[#out + 1] = '*No mana sources in the deck*'
       else
-        out[#out + 1] = ('%s on the play, %s on the draw'):format(percent(odds.play), percent(odds.draw))
         local of = plural(pool.lands, 'land')
         if pool.others > 0 then
           of = of .. ' and ' .. plural(pool.others, 'other source')
         end
+        vim.list_extend(out, {
+          ('%s: %s on the play, %s on the draw'):format(head, percent(odds.play), percent(odds.draw)),
+          '',
+          ('%s to draw %s'):format(percent(odds.enough), plural(odds.turn, 'source')),
+        })
         if odds.colors then
           local seen, sources = {}, {}
           for _, pip in ipairs(odds.pips) do
@@ -118,6 +124,8 @@ local function curve_lines(card, entries)
             '',
             ('Sources: %s of %s'):format(table.concat(sources, '  '), of),
           })
+        else
+          vim.list_extend(out, { '', 'Sources: ' .. of })
         end
       end
     end
