@@ -61,10 +61,21 @@ local function validate(cfg)
   vim.validate('cache_dir', cfg.cache_dir, 'string')
 end
 
---- Effective config: defaults < vim.g.scryvim < setup() opts.
+-- The last result of `M.get()` and what it was built from.
+local last = nil ---@type { cfg: table, g: table|nil, user: table }|nil
+
+--- Effective config: defaults < vim.g.scryvim < setup() opts. The result
+--- is kept until `vim.g.scryvim` or the setup() opts change, and is shared
+--- between callers, so treat it as read-only.
 function M.get()
-  local cfg = merge(merge(defaults(), vim.g.scryvim or {}), user_opts)
+  local g = vim.g.scryvim
+  if last and last.user == user_opts and vim.deep_equal(last.g, g) then
+    return last.cfg
+  end
+  local cfg = merge(merge(defaults(), g or {}), user_opts)
   validate(cfg)
+  -- `vim.g.scryvim` hands out a new copy on every read, so `g` is ours.
+  last = { cfg = cfg, g = g, user = user_opts }
   return cfg
 end
 
