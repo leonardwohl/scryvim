@@ -1,6 +1,7 @@
 --- In-process LSP server (see `:h lsp-server`).
 local config = require('scryvim.config')
 local data = require('scryvim.data')
+local icons = require('scryvim.icons')
 local parse = require('scryvim.parse')
 local render = require('scryvim.render')
 local sort = require('scryvim.sort')
@@ -242,7 +243,7 @@ function M.create(dispatchers)
       if cost then
         hints[#hints + 1] = {
           position = { line = row, character = #lines[row + 1] },
-          label = cost,
+          label = icons.replace(cost),
           paddingLeft = true,
         }
       end

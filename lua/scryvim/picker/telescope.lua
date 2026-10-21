@@ -1,16 +1,21 @@
 --- telescope.nvim adapter: multi-select with markdown preview.
 local colors = require('scryvim.colors')
+local icons = require('scryvim.icons')
 
 local M = {}
 
 -- Telescope display function: the text plus highlights for its mana symbols.
 local function colored(text)
   return function()
-    local hls = {}
-    for _, sym in ipairs(colors.symbols(text)) do
-      hls[#hls + 1] = { { sym[1], sym[2] }, colors.group(sym[3]) }
+    local out, hls, pos = {}, {}, 0
+    for _, seg in ipairs(colors.segments(text)) do
+      out[#out + 1] = seg[1]
+      if seg[2] then
+        hls[#hls + 1] = { { pos, pos + #seg[1] }, seg[2] }
+      end
+      pos = pos + #seg[1]
     end
-    return text, hls
+    return table.concat(out), hls
   end
 end
 
@@ -29,7 +34,7 @@ function M.pick(items, opts)
         results = items,
         entry_maker = function(card)
           local text = opts.format_item(card)
-          return { value = card, display = opts.color and colored(text) or text, ordinal = card.name }
+          return { value = card, display = opts.color and colored(text) or icons.replace(text), ordinal = card.name }
         end,
       }),
       sorter = conf.generic_sorter({}),
@@ -37,9 +42,10 @@ function M.pick(items, opts)
         define_preview = function(self, entry)
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(opts.preview(entry.value), '\n'))
           vim.bo[self.state.bufnr].filetype = 'markdown'
-          if opts.color then
-            colors.highlight_buf(self.state.bufnr)
+          if vim.api.nvim_win_is_valid(self.state.winid) then
+            vim.wo[self.state.winid].conceallevel = 2
           end
+          colors.highlight_buf(self.state.bufnr, opts.color)
         end,
       }),
       attach_mappings = function(prompt_bufnr)

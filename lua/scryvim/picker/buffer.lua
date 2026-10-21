@@ -2,6 +2,7 @@
 --- a preview window. Move with any motion, search with `/`, mark cards with
 --- <Tab>, add them with <CR>.
 local colors = require('scryvim.colors')
+local icons = require('scryvim.icons')
 
 local M = {}
 
@@ -57,9 +58,7 @@ function M.pick(items, opts)
   end
   local list_buf = scratch(lines)
   vim.bo[list_buf].filetype = 'scryvim_results'
-  if opts.color then
-    colors.highlight_buf(list_buf)
-  end
+  colors.highlight_buf(list_buf, opts.color)
   local preview_buf = scratch({})
 
   local marked = {} -- row -> extmark id
@@ -85,6 +84,9 @@ function M.pick(items, opts)
   vim.cmd.stopinsert()
   vim.wo[list_win].cursorline = true
   vim.wo[list_win].signcolumn = 'yes:1'
+  -- Mana icons stay on the cursor line.
+  vim.wo[list_win].conceallevel = 2
+  vim.wo[list_win].concealcursor = 'n'
   vim.wo[preview_win].wrap = true
   vim.wo[preview_win].linebreak = true
   vim.wo[preview_win].conceallevel = 2
@@ -103,9 +105,7 @@ function M.pick(items, opts)
     -- Treesitter directly rather than filetype=markdown, which would run
     -- markdown ftplugins and autocmds on every redraw.
     pcall(vim.treesitter.start, preview_buf, 'markdown')
-    if opts.color then
-      colors.highlight_buf(preview_buf)
-    end
+    colors.highlight_buf(preview_buf, opts.color)
     vim.api.nvim_win_set_cursor(preview_win, { 1, 0 })
   end
 
@@ -250,6 +250,7 @@ function M.pick(items, opts)
         end
       end
     end
+    icons.conceal_buf(list_buf, first)
     vim.api.nvim_win_set_config(list_win, { title = title(loading), title_pos = 'center' })
   end
 

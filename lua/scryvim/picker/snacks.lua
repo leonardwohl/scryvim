@@ -1,5 +1,6 @@
 --- snacks.nvim picker adapter: multi-select with markdown preview.
 local colors = require('scryvim.colors')
+local icons = require('scryvim.icons')
 
 local M = {}
 
@@ -19,6 +20,10 @@ local function preview(ctx)
     local extmark = { end_col = mark.end_col, hl_group = mark.hl_group }
     vim.api.nvim_buf_set_extmark(ctx.buf, ns, mark.row - 1, mark.col, extmark)
   end
+  icons.conceal_buf(ctx.buf)
+  if ctx.win and vim.api.nvim_win_is_valid(ctx.win) then
+    vim.wo[ctx.win].conceallevel = 2
+  end
 end
 
 function M.pick(items, opts)
@@ -36,8 +41,8 @@ function M.pick(items, opts)
   require('snacks').picker.pick({
     title = opts.prompt,
     items = entries,
-    format = opts.color and function(item)
-      return colors.segments(item.text)
+    format = (opts.color or icons.map()) and function(item)
+      return opts.color and colors.segments(item.text) or { { icons.replace(item.text) } }
     end or 'text',
     preview = preview,
     confirm = function(picker, item)

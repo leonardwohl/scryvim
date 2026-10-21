@@ -8,6 +8,7 @@ local function defaults()
     inlay_hints = true,
     colors = true,
     type_colors = false,
+    icons = false,
     diagnostics = true,
     counts = true,
     picker = 'buffer',
@@ -44,6 +45,7 @@ local function validate(cfg)
   vim.validate('inlay_hints', cfg.inlay_hints, 'boolean')
   vim.validate('colors', cfg.colors, 'boolean')
   vim.validate('type_colors', cfg.type_colors, 'boolean')
+  vim.validate('icons', cfg.icons, { 'boolean', 'table' })
   vim.validate('diagnostics', cfg.diagnostics, 'boolean')
   vim.validate('counts', cfg.counts, 'boolean')
   vim.validate('picker', cfg.picker, function(v)

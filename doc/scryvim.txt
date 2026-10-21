@@ -235,6 +235,7 @@ wins. `setup()` is optional. Defaults: >lua
       inlay_hints   = true,
       colors        = true,     -- see |scryvim-colors|
       type_colors   = false,    -- see |scryvim-type-colors|
+      icons         = false,    -- see |scryvim-icons|
       diagnostics   = true,
       counts        = true,     -- see |scryvim-count-lines|
       picker        = 'buffer', -- see below
@@ -342,6 +343,32 @@ your config or colorscheme, for example: >lua
 <
 With `colors = false`, mana costs are plain inlay hints and nothing else is
 colored.
+
+                                                              *scryvim-icons*
+With `icons = true`, mana symbols show as Nerd Font icons
+(https://www.nerdfonts.com, version 3 or later) wherever scryvim shows them:
+mana costs after card lines, hover, the pane, count lines and search
+results. They are Material Design icons:
+
+    {W}  sun 󰖨          {C}  rhombus 󰜌       {0} to {10}  circled numbers
+    {U}  water drop 󰖌   {S}  snowflake 󰜗     {X}  circled X 󰰱
+    {B}  skull 󰚌        {P}  Φ
+    {R}  fire 󰈸
+    {G}  tree 󰔱
+
+Each part of a hybrid or Phyrexian symbol gets its icon, keeping the slash:
+`{W/U}` is 󰖨/󰖌 and `{R/P}` is 󰈸/Φ. Symbols with a part that has no icon,
+such as `{T}`, `{15}` or `{HR}`, stay as text. Colors apply to the icons as
+they do to the text.
+
+`icons` may be a table of overrides, keyed by symbol part. `false` keeps that
+part as text. Use a single character, since buffers conceal the `{R}` text
+with it: >lua
+    icons = { R = '', P = false }  -- nf-fa-fire
+<
+In buffers the `{R}` text stays and is concealed (|conceal|), so it shows
+where 'conceallevel' is 0, and on the cursor line where 'concealcursor'
+doesn't conceal it.
 
                                                         *scryvim-type-colors*
 With `type_colors = true`, the language server marks each card name with its

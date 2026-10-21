@@ -7,6 +7,7 @@ Neovim plugin for building Magic: The Gathering decks in plain-text decklists, b
 - Mana costs as inlay hints; full card text on hover.
 - Mana symbols colored by color in mana costs, hover and picker previews, using your colorscheme's colors (`:h scryvim-colors`).
 - Optionally, card names colored by card type (`type_colors = true`).
+- Optionally, [Nerd Font](https://www.nerdfonts.com) icons for mana symbols: `{R}` as 󰈸 (`icons = true`, `:h scryvim-icons`).
 - `:Scryvim sort` orders cards by mana value.
 - `:Scryvim count <query>` counts the deck's cards that match any Scryfall query, such as `otag:removal` or `produces:r`. Keep counts in the deck with `// count removal: otag:removal` lines, which show their totals live.
 - `:Scryvim mana` and `// count mana symbols` lines count the colored, colorless and snow mana symbols in the deck's mana costs, to help work out how many sources each color needs.
@@ -100,6 +101,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   inlay_hints   = true,
   colors        = true,
   type_colors   = false,
+  icons         = false,       -- true, or a table of overrides
   diagnostics   = true,
   counts        = true,
   picker        = 'buffer',    -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
