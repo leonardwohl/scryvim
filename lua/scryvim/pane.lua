@@ -113,7 +113,7 @@ local function curve_lines(card, entries)
           end
           vim.list_extend(out, {
             '',
-            ('%s have the colors with %s'):format(percent(odds.colors), plural(odds.turn, 'source')),
+            ('%s to have the colors with %s'):format(percent(odds.colors), plural(odds.turn, 'source')),
             '',
             ('Sources: %s of %s'):format(table.concat(sources, '  '), of),
           })

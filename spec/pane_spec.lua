@@ -96,7 +96,7 @@ describe('pane', function()
       '',
       '100% on the play, 100% on the draw',
       '',
-      '100% have the colors with 1 source',
+      '100% to have the colors with 1 source',
       '',
       'Sources: {R} 20 of 20 lands',
     }, content(3))
@@ -109,7 +109,7 @@ describe('pane', function()
       '',
       '0% on the play, 0% on the draw',
       '',
-      '0% have the colors with 2 sources',
+      '0% to have the colors with 2 sources',
       '',
       'Sources: {U} 0 of 20 lands',
     }, vim.list_slice(out, #out - 6))
