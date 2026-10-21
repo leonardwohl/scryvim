@@ -7,7 +7,7 @@ local M = {}
 M.BULK_URL = 'https://api.scryfall.com/bulk-data/oracle-cards'
 
 --- Bumped when cards.json gains fields; older caches are rebuilt.
-M.CACHE_FORMAT = 2
+M.CACHE_FORMAT = 3
 
 local BUILD_SCRIPT = vim.fs.joinpath(vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2)), 'build.lua')
 

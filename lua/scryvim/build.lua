@@ -25,6 +25,7 @@ local FIELDS = {
   'toughness',
   'loyalty',
   'defense',
+  'produced_mana',
   'scryfall_uri',
 }
 

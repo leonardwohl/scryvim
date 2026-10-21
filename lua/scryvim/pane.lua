@@ -2,9 +2,11 @@
 --- deck windows. A card line shows the card, spaced out more than hover since
 --- the pane has the room. A count line lists
 --- the deck cards it counts, and a mana symbols line the cards with symbols.
+--- Below a nonland card are its odds of being cast on curve.
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
+local curve = require('scryvim.curve')
 local data = require('scryvim.data')
 local parse = require('scryvim.parse')
 local render = require('scryvim.render')
@@ -40,6 +42,88 @@ local function card_list(entries)
   return out
 end
 
+-- Never rounds to 0% or 100% unless exact.
+local function percent(p)
+  local n = math.floor(p * 100 + 0.5)
+  if n == 100 and p < 1 then
+    return '>99%'
+  elseif n == 0 and p > 0 then
+    return '<1%'
+  end
+  return n .. '%'
+end
+
+-- Odds for the deck last shown, by mana cost, so moving between cards
+-- doesn't redo them.
+local odds_cache = { deck = nil, by_cost = {} }
+
+local function odds_for(deck, cost)
+  local key = vim.inspect(deck)
+  if odds_cache.deck ~= key then
+    odds_cache = { deck = key, by_cost = {} }
+  end
+  local hit = odds_cache.by_cost[cost]
+  if hit == nil then
+    hit = curve.odds(deck, cost) or false
+    odds_cache.by_cost[cost] = hit
+  end
+  return hit or nil
+end
+
+local function plural(n, word)
+  return ('%d %s%s'):format(n, word, n == 1 and '' or 's')
+end
+
+--- The on-curve section for `card` in the deck `entries`: per nonland face
+--- with a mana cost, the chance to cast it on the turn of its mana value.
+local function curve_lines(card, entries)
+  local faces = {}
+  for _, face in ipairs(card.card_faces or {}) do
+    if face.mana_cost and face.mana_cost ~= '' and not curve.is_land(face) then
+      faces[#faces + 1] = face
+    end
+  end
+  if not card.card_faces and not curve.is_land(card) then
+    faces[1] = card
+  end
+  local deck = curve.deck(entries, data.get)
+  local out = {}
+  for _, face in ipairs(faces) do
+    local odds = deck.size > 0 and odds_for(deck, face.mana_cost or '')
+    if odds then
+      local head = #faces > 1 and ('On curve: %s, turn %d'):format(face.name, odds.turn)
+        or ('On curve: turn %d'):format(odds.turn)
+      vim.list_extend(out, { '', '---', '', '**' .. head .. '**', '' })
+      local pool = odds.pool
+      if pool.lands + pool.others == 0 then
+        out[#out + 1] = '*No mana sources in the deck*'
+      else
+        out[#out + 1] = ('%s on the play, %s on the draw'):format(percent(odds.play), percent(odds.draw))
+        local of = plural(pool.lands, 'land')
+        if pool.others > 0 then
+          of = of .. ' and ' .. plural(pool.others, 'other source')
+        end
+        if odds.colors then
+          local seen, sources = {}, {}
+          for _, pip in ipairs(odds.pips) do
+            if not seen[pip] then
+              seen[pip] = true
+              sources[#sources + 1] = curve.symbols(pip) .. ' ' .. curve.sources(pool, pip)
+            end
+          end
+          vim.list_extend(out, {
+            '',
+            ('%s to have the colors with %s'):format(percent(odds.colors), plural(odds.turn, 'source')),
+            '',
+            ('Sources: %s of %s'):format(table.concat(sources, '  '), of),
+          })
+        end
+      end
+    end
+  end
+  return out
+end
+
 --- The pane text for line `row` (1-based) of `lines`, passed to `cb` as a
 --- list of lines; nil leaves the pane as it is. `cb` may run later, when a
 --- count needs Scryfall.
@@ -62,7 +146,8 @@ function M.content(lines, row, cb)
     if not card then
       return cb({ '*Unknown card: ' .. parsed.name .. '*' })
     end
-    return cb(vim.split(render.markdown(card, { spacious = true }), '\n', { plain = true }))
+    local out = vim.split(render.markdown(card, { spacious = true }), '\n', { plain = true })
+    return cb(vim.list_extend(out, curve_lines(card, count.entries(lines, data.get))))
   end
 
   local entries = count.entries(lines, data.get)

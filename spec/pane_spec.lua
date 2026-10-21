@@ -81,7 +81,7 @@ describe('pane', function()
     http.get_json = orig
   end)
 
-  it('shows the card on a card line, with more room than hover', function()
+  it('shows the card on a card line, with more room than hover, and its odds on curve', function()
     assert.are.same({
       '**Lightning Bolt**  {R}',
       '*Instant*',
@@ -89,7 +89,47 @@ describe('pane', function()
       '---',
       '',
       'Lightning Bolt deals 3 damage to any target.',
+      '',
+      '---',
+      '',
+      '**On curve: turn 1**',
+      '',
+      '100% on the play, 100% on the draw',
+      '',
+      '100% to have the colors with 1 source',
+      '',
+      'Sources: {R} 20 of 20 lands',
     }, content(3))
+  end)
+
+  it('counts only the sources of the colors a card needs', function()
+    local out = content(4)
+    assert.are.same({
+      '**On curve: turn 2**',
+      '',
+      '0% on the play, 0% on the draw',
+      '',
+      '0% to have the colors with 2 sources',
+      '',
+      'Sources: {U} 0 of 20 lands',
+    }, vim.list_slice(out, #out - 6))
+  end)
+
+  it('gives each face with a cost its own odds', function()
+    local lines = { '1 Fire // Ice', '30 Mountain', '29 Island' }
+    local out
+    pane.content(lines, 1, function(text)
+      out = text
+    end)
+    local heads = vim.tbl_filter(function(l)
+      return l:match('^%*%*On curve')
+    end, out)
+    assert.are.same({ '**On curve: Fire, turn 2**', '**On curve: Ice, turn 2**' }, heads)
+  end)
+
+  it('shows no odds for lands', function()
+    local out = content(5)
+    assert.is_nil(table.concat(out, '\n'):find('On curve'))
   end)
 
   it('lists the cards a count line counts, without the sideboard', function()
