@@ -357,9 +357,12 @@ results. They are Material Design icons:
     {G}  tree 󰔱
 
 Each part of a hybrid or Phyrexian symbol gets its icon, keeping the slash:
-`{W/U}` is 󰖨/󰖌 and `{R/P}` is 󰈸/Φ. Symbols with a part that has no icon,
+`{W/U}` is 󰖨 /󰖌 and `{R/P}` is 󰈸 /Φ. Symbols with a part that has no icon,
 such as `{T}`, `{15}` or `{HR}`, stay as text. Colors apply to the icons as
 they do to the text.
+
+Nerd Font icons draw wider than the one cell Neovim gives them, so an icon
+followed by other text gets a space after it: `{1}{R}` is 󰲠 󰈸, not 󰲠󰈸.
 
 `icons` may be a table of overrides, keyed by symbol part. `false` keeps that
 part as text. Use a single character, since buffers conceal the `{R}` text
