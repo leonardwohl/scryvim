@@ -137,6 +137,21 @@ totals at its end, updated with the deck: >
 <
 They also turn off with `counts = false`.
 
+:Scryvim pane                                              *:Scryvim-pane*
+    Toggle the preview pane, a split on the right of the tab that follows
+    the cursor in deck windows:
+
+    - on a card line, the card, as |vim.lsp.buf.hover()| shows it,
+    - on a count line (|scryvim-count-lines|), the total and the cards it
+      counts, most copies first,
+    - on a `// count mana symbols` line, the totals and the cards with
+      mana symbols.
+
+    Other lines leave the pane as it is. After an edit the pane waits a
+    second, like count lines. `:q` in the last other window closes the
+    pane too. Set its width with `pane.width`, and open it with every deck
+    with `pane.auto_open`.
+
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now.
 
@@ -147,10 +162,12 @@ scryvim defines no default keymaps. These are provided:
 
     <Plug>(scryvim-search)    normal mode               *<Plug>(scryvim-search)*
     <Plug>(scryvim-sort)      normal and visual mode    *<Plug>(scryvim-sort)*
+    <Plug>(scryvim-pane)      normal mode               *<Plug>(scryvim-pane)*
 
 Example: >lua
     vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
     vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
+    vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 <
 ==============================================================================
 5. LSP FEATURES                                                  *scryvim-lsp*
@@ -183,6 +200,7 @@ wins. `setup()` is optional. Defaults: >lua
       picker        = 'buffer', -- see below
       search        = { max_pages = 3 },   -- 175 cards per page
       hover         = { max_width = 60 },  -- columns; 0 for no limit
+      pane          = { width = 50, auto_open = false },  -- |:Scryvim-pane|
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <
@@ -234,6 +252,7 @@ require('scryvim').count({query}, {buf}, {first}, {last})
 require('scryvim').mana({buf}, {first}, {last})
                                           Same as |:Scryvim-mana|; 1-based
                                           inclusive lines.
+require('scryvim').pane()                 Same as |:Scryvim-pane|.
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
 

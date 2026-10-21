@@ -119,6 +119,11 @@ function M.mana(bufnr, first, last)
   vim.notify('Mana symbols: ' .. symbols.format(symbols.entries(entries, data.get)), vim.log.levels.INFO)
 end
 
+--- Toggle the preview pane on the right of the current tab.
+function M.pane()
+  require('scryvim.pane').toggle()
+end
+
 --- Force a card data refresh.
 function M.update()
   require('scryvim.data').update({ force = true, announce = true })
@@ -164,6 +169,9 @@ M.subcommands = {
       M.mana(0)
     end
   end,
+  pane = function()
+    M.pane()
+  end,
   update = function()
     M.update()
   end,
@@ -177,7 +185,7 @@ function M.command(o)
   local sub = o.fargs[1]
   local fn = sub and M.subcommands[sub]
   if not fn then
-    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|update|info}', vim.log.levels.ERROR)
+    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|pane|update|info}', vim.log.levels.ERROR)
     return
   end
   fn(o)

@@ -19,7 +19,7 @@ vim.api.nvim_create_user_command('Scryvim', scryvim.command, {
   nargs = '+',
   range = true,
   complete = scryvim.complete,
-  desc = 'scryvim: search | sort | count | mana | update | info',
+  desc = 'scryvim: search | sort | count | mana | pane | update | info',
 })
 
 vim.keymap.set('n', '<Plug>(scryvim-search)', function()
@@ -33,6 +33,9 @@ vim.keymap.set('x', '<Plug>(scryvim-sort)', function()
   vim.api.nvim_feedkeys(vim.keycode('<Esc>'), 'nx', false)
   scryvim.sort(0, math.min(a, b), math.max(a, b))
 end, { desc = 'scryvim: sort selection by mana value' })
+vim.keymap.set('n', '<Plug>(scryvim-pane)', function()
+  scryvim.pane()
+end, { desc = 'scryvim: toggle the preview pane' })
 
 vim.lsp.config('scryvim', {
   cmd = function(dispatchers)
@@ -69,13 +72,23 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
--- Live totals on `// count: <query>` and `// count mana symbols` lines.
+-- Live totals on `// count: <query>` and `// count mana symbols` lines,
+-- and the preview pane with `pane.auto_open`.
 vim.api.nvim_create_autocmd('FileType', {
   group = group,
   pattern = 'deck',
   callback = function(args)
-    if require('scryvim.config').get().counts then
+    local cfg = require('scryvim.config').get()
+    if cfg.counts then
       require('scryvim.tally').attach(args.buf)
+    end
+    if cfg.pane.auto_open then
+      -- Once the deck is in its window, so the pane opens beside it.
+      vim.schedule(function()
+        if vim.api.nvim_get_current_buf() == args.buf then
+          require('scryvim.pane').open()
+        end
+      end)
     end
   end,
 })

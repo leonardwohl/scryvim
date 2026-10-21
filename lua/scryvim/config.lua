@@ -13,6 +13,7 @@ local function defaults()
     picker = 'buffer',
     search = { max_pages = 3 },
     hover = { max_width = 60 },
+    pane = { width = 50, auto_open = false },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end
@@ -52,6 +53,9 @@ local function validate(cfg)
   vim.validate('search.max_pages', cfg.search.max_pages, 'number')
   vim.validate('hover', cfg.hover, 'table')
   vim.validate('hover.max_width', cfg.hover.max_width, 'number')
+  vim.validate('pane', cfg.pane, 'table')
+  vim.validate('pane.width', cfg.pane.width, 'number')
+  vim.validate('pane.auto_open', cfg.pane.auto_open, 'boolean')
   vim.validate('cache_dir', cfg.cache_dir, 'string')
 end
 
