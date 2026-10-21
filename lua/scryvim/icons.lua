@@ -5,8 +5,9 @@
 --- no icon (`{T}`, `{HR}`, `{15}`) stays as text.
 ---
 --- Nerd Font icons are drawn wider than the one cell Neovim gives them, so
---- an icon right before other text gets a space after it: `{1}{R}` shows as
---- `󰲠 󰈸`. Before a space or at the end, it needs none.
+--- a symbol right before other text gets a space after it: `{1}{R}` shows as
+--- `󰲠 󰈸`. Before a space or at the end, it needs none, and within a hybrid
+--- symbol the icons stay against the slash.
 ---
 --- Strings get the icons in their text. Buffers keep the `{R}` text and
 --- conceal it with the icon, so the window needs a 'conceallevel' of 2.
@@ -79,7 +80,8 @@ function M.pieces(text, map)
       local col = s -- 0-based column of the first part, just past the `{`
       for i, part in ipairs(parts) do
         local stop = col + #part + (i == #parts and 1 or 0)
-        local pad = text:sub(stop + 1, stop + 1):match('^%S$') ~= nil
+        -- Within a hybrid symbol the icons stay against the slashes.
+        local pad = i == #parts and text:sub(stop + 1, stop + 1):match('^%S$') ~= nil
         out[#out + 1] = { i == 1 and col - 1 or col, stop, found[i], pad }
         col = col + #part + 1
       end
@@ -132,8 +134,7 @@ function M.conceal_buf(buf, first)
     local row = first + i - 1
     for _, p in ipairs(M.pieces(line, map)) do
       -- Conceal takes one character, so the space conceals the next byte
-      -- and the rest is hidden. A middle part (the `U` of `{W/U/P}`) is
-      -- one byte, with no room for the space.
+      -- and the rest is hidden.
       if p[4] and p[2] - p[1] >= 2 then
         vim.api.nvim_buf_set_extmark(buf, M.ns, row, p[1], { end_col = p[1] + 1, conceal = p[3] })
         vim.api.nvim_buf_set_extmark(buf, M.ns, row, p[1] + 1, { end_col = p[1] + 2, conceal = ' ' })
