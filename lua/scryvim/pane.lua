@@ -164,11 +164,11 @@ end
 ---@param cb fun(text: string[]|nil)
 function M.content(lines, row, cb)
   local line = lines[row] or ''
-  local query, label = tally.query(line)
-  local mana = not query and tally.is_mana(line)
-  local cards = not query and not mana and tally.is_cards(line)
-  if not query and not mana and not cards then
-    local parsed = parse.parse(line)
+  local parsed = parse.parse(line)
+  local query, label = parsed.query, parsed.label
+  local mana, cards = parsed.count == 'mana', parsed.count == 'cards'
+  -- Card lines have a numeric `count` too: their quantity.
+  if parsed.kind ~= 'comment' or not parsed.count then
     if parsed.kind ~= 'card' then
       return cb(nil)
     end

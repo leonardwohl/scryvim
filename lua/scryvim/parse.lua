@@ -53,15 +53,43 @@ function M.card(line, allow_empty)
   }
 end
 
+local function trim(s)
+  return s:match('^%s*(.-)%s*$')
+end
+
+--- A comment line, with `count` set for count lines: `'query'` (with
+--- `query` and an optional `label`) for `// count <label>: <query>`,
+--- `'mana'` for `// count mana symbols` and `'cards'` for `// count cards`.
+local function comment(rest)
+  local label, q = nil, rest:match('^[Cc]ount:(.*)$')
+  if not q then
+    label, q = rest:match('^[Cc]ount%s([^:]*):(.*)$')
+  end
+  q = q and trim(q)
+  if q and q ~= '' then
+    label = label and trim(label)
+    return { kind = 'comment', count = 'query', query = q, label = label ~= '' and label or nil }
+  end
+  local words = trim(rest):lower()
+  if words:match('^count%s+mana%s+symbols$') then
+    return { kind = 'comment', count = 'mana' }
+  elseif words:match('^count%s+cards$') then
+    return { kind = 'comment', count = 'cards' }
+  end
+  return { kind = 'comment' }
+end
+
 --- Parse one decklist line into `card`, `section`, `comment` or `blank`.
+--- Count lines are comments with a `count` field (see `comment` above).
 ---@param line string
 ---@return table
 function M.parse(line)
   if line:match('^%s*$') then
     return { kind = 'blank' }
   end
-  if line:match('^%s*//') or line:match('^%s*#') then
-    return { kind = 'comment' }
+  local rest = line:match('^%s*//%s*(.*)$') or line:match('^%s*#%s*(.*)$')
+  if rest then
+    return comment(rest)
   end
   local word = line:match('^%s*(%a+)%s*:?%s*$')
   if word and SECTIONS[word:lower()] then

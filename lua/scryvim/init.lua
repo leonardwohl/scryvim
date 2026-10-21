@@ -42,9 +42,9 @@ function M.sort(bufnr, first, last)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   if not first then
     local row = vim.api.nvim_win_get_cursor(0)[1]
-    local query = require('scryvim.tally').query(lines[row])
-    if query then
-      return M.gather(bufnr, row, query, lines)
+    local parsed = require('scryvim.parse').parse(lines[row])
+    if parsed.count == 'query' then
+      return M.gather(bufnr, row, parsed.query, lines)
     end
     first, last = sort.block_at(lines, row)
     if not first then

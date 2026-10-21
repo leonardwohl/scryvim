@@ -7,6 +7,7 @@ local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
 local data = require('scryvim.data')
+local parse = require('scryvim.parse')
 local render = require('scryvim.render')
 local symbols = require('scryvim.symbols')
 
@@ -20,45 +21,6 @@ M.DEBOUNCE_MS = 1000
 
 -- Buffer -> { timer, generation, unsubscribe }.
 local attached = {} ---@type table<integer, table>
-
---- The query and label of a count line, or nil.
----@param line string
----@return string|nil query, string|nil label
-function M.query(line)
-  local rest = line:match('^%s*//%s*(.*)$') or line:match('^%s*#%s*(.*)$')
-  if not rest then
-    return nil
-  end
-  local label, q = nil, rest:match('^[Cc]ount:(.*)$')
-  if not q then
-    label, q = rest:match('^[Cc]ount%s([^:]*):(.*)$')
-  end
-  q = q and vim.trim(q)
-  if not q or q == '' then
-    return nil
-  end
-  label = label and vim.trim(label)
-  return q, label ~= '' and label or nil
-end
-
-local function is_special(line, pattern)
-  local rest = line:match('^%s*//%s*(.-)%s*$') or line:match('^%s*#%s*(.-)%s*$')
-  return rest ~= nil and rest:lower():match(pattern) ~= nil
-end
-
---- Whether `line` is a `// count mana symbols` line.
----@param line string
----@return boolean
-function M.is_mana(line)
-  return is_special(line, '^count%s+mana%s+symbols$')
-end
-
---- Whether `line` is a `// count cards` line.
----@param line string
----@return boolean
-function M.is_cards(line)
-  return is_special(line, '^count%s+cards$')
-end
 
 local function cards_text(stats)
   local breakdown = stats.lands
@@ -95,12 +57,12 @@ function M.refresh(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local rows, mana_rows, card_rows = {}, {}, {}
   for i, line in ipairs(lines) do
-    local q, label = M.query(line)
-    if q then
-      rows[#rows + 1] = { row = i - 1, query = q, label = label }
-    elseif M.is_mana(line) then
+    local p = parse.parse(line)
+    if p.count == 'query' then
+      rows[#rows + 1] = { row = i - 1, query = p.query, label = p.label }
+    elseif p.count == 'mana' then
       mana_rows[#mana_rows + 1] = i - 1
-    elseif M.is_cards(line) then
+    elseif p.count == 'cards' then
       card_rows[#card_rows + 1] = i - 1
     end
   end
