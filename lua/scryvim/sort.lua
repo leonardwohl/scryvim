@@ -1,19 +1,14 @@
 --- Pure: sort decklist lines by mana value. No Neovim state.
+local curve = require('scryvim.curve')
 local parse = require('scryvim.parse')
 
 local M = {}
-
-local function is_land(card)
-  local face = card.card_faces and card.card_faces[1]
-  local type_line = (face and face.type_line) or card.type_line or ''
-  return type_line:find('Land', 1, true) ~= nil
-end
 
 local function sort_block(block, lookup)
   local keyed = {}
   for i, entry in ipairs(block) do
     local card = lookup(entry.parsed.name)
-    local group = not card and 3 or is_land(card) and 2 or 1
+    local group = not card and 3 or curve.is_land(card) and 2 or 1
     keyed[i] = {
       line = entry.line,
       group = group,
@@ -88,9 +83,6 @@ function M.block_at(lines, row)
   return first, last
 end
 
---- Sections whose cards are only gathered by a count line inside them.
-local SIDE_SECTIONS = { sideboard = true, maybeboard = true }
-
 --- Card lines below `row` that a count line at `row` gathers, as
 --- `{ row = i, name = full name }`. A count line in the main deck takes
 --- main-deck cards (not Sideboard, Maybeboard or `SB:` lines); one inside
@@ -104,11 +96,11 @@ function M.candidates(lines, row, lookup)
   for i, line in ipairs(lines) do
     local p = parse.parse(line)
     if p.kind == 'section' then
-      side = SIDE_SECTIONS[p.name:lower()] or false
+      side = parse.SIDE_SECTIONS[p.name:lower()] or false
       zone = side and i or 'main'
     end
     if p.kind == 'card' then
-      zones[i] = (not side and p.prefix:match('^%s*[Ss][Bb]:')) and 'sb' or zone
+      zones[i] = (not side and parse.is_sb(p)) and 'sb' or zone
     else
       zones[i] = zone
     end

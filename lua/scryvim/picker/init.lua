@@ -7,8 +7,6 @@ local render = require('scryvim.render')
 
 local M = {}
 
-M.SEARCH_URL = 'https://api.scryfall.com/cards/search?q='
-
 local AUTO_ORDER = {
   { name = 'snacks', probe = 'snacks' },
   { name = 'telescope', probe = 'telescope' },
@@ -120,7 +118,7 @@ function M.fetch(query, max_pages, cb, on_page)
     return out
   end
 
-  http.get_json(M.SEARCH_URL .. http.urlencode(query), function(err, first)
+  http.get_json(http.SEARCH_URL .. http.urlencode(query), function(err, first)
     if err then
       return finish(err)
     end

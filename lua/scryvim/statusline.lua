@@ -11,6 +11,7 @@ local config = require('scryvim.config')
 local count = require('scryvim.count')
 local curve = require('scryvim.curve')
 local data = require('scryvim.data')
+local render = require('scryvim.render')
 local symbols = require('scryvim.symbols')
 
 local M = {}
@@ -69,10 +70,6 @@ function M.stats(buf)
   return stats
 end
 
-local function plural(n, word)
-  return ('%d %s%s'):format(n, word, n == 1 and '' or 's')
-end
-
 -- Nerd Font icons for `{R}`, when `scryvim.icons` is there and `icons` on.
 local function icon_map()
   local ok, icons = pcall(require, 'scryvim.icons')
@@ -98,10 +95,10 @@ function M.chunks(buf, opts)
     out[#out + 1] = chunk
   end
   if opts.cards then
-    add({ plural(stats.cards, 'card') })
+    add({ render.plural(stats.cards, 'card') })
   end
   if opts.lands and stats.lands then
-    add({ plural(stats.lands, 'land') })
+    add({ render.plural(stats.lands, 'land') })
   end
   if opts.mana and stats.mana and next(stats.mana) then
     local icons = icon_map()

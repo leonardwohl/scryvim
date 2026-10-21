@@ -71,6 +71,16 @@ function M.parse(line)
   return M.card(line) or { kind = 'section', name = line:match('^%s*(.-)%s*$') }
 end
 
+--- Sections whose cards are outside the main deck.
+M.SIDE_SECTIONS = { sideboard = true, maybeboard = true }
+
+--- True for a card line marked `SB:` (a sideboard card outside a section).
+---@param parsed table
+---@return boolean
+function M.is_sb(parsed)
+  return parsed.kind == 'card' and parsed.prefix:match('^%s*[Ss][Bb]:') ~= nil
+end
+
 --- True for lines that separate sortable blocks.
 function M.is_divider(parsed)
   return parsed.kind ~= 'card'

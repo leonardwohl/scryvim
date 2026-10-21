@@ -9,6 +9,7 @@ local count = require('scryvim.count')
 local curve = require('scryvim.curve')
 local data = require('scryvim.data')
 local icons = require('scryvim.icons')
+local render = require('scryvim.render')
 local symbols = require('scryvim.symbols')
 
 local M = {}
@@ -74,11 +75,10 @@ function M.cards(entries)
       lands = lands + e.count
     end
   end
-  local function plural(n, word)
-    return ('%d %s%s'):format(n, word, n == 1 and '' or 's')
-  end
-  local breakdown = data.ready() and total > 0 and plural(lands, 'land') .. '  ' .. plural(total - lands, 'nonland')
-  return plural(total, 'card'), breakdown or nil
+  local breakdown = data.ready()
+    and total > 0
+    and render.plural(lands, 'land') .. '  ' .. render.plural(total - lands, 'nonland')
+  return render.plural(total, 'card'), breakdown or nil
 end
 
 local function mark(buf, row, virt_text)
