@@ -88,4 +88,71 @@ function M.block_at(lines, row)
   return first, last
 end
 
+--- Sections whose cards are only gathered by a count line inside them.
+local SIDE_SECTIONS = { sideboard = true, maybeboard = true }
+
+--- Card lines below `row` that a count line at `row` gathers, as
+--- `{ row = i, name = full name }`. A count line in the main deck takes
+--- main-deck cards (not Sideboard, Maybeboard or `SB:` lines); one inside
+--- a Sideboard or Maybeboard section takes cards from that section only.
+---@param lines string[]
+---@param row integer
+---@param lookup fun(name: string): table|nil
+---@return { row: integer, name: string }[]
+function M.candidates(lines, row, lookup)
+  local zones, zone, side = {}, 'main', false
+  for i, line in ipairs(lines) do
+    local p = parse.parse(line)
+    if p.kind == 'section' then
+      side = SIDE_SECTIONS[p.name:lower()] or false
+      zone = side and i or 'main'
+    end
+    if p.kind == 'card' then
+      zones[i] = (not side and p.prefix:match('^%s*[Ss][Bb]:')) and 'sb' or zone
+    else
+      zones[i] = zone
+    end
+  end
+  local out = {}
+  for i = row + 1, #lines do
+    local p = parse.parse(lines[i])
+    if p.kind == 'card' and zones[i] == zones[row] then
+      local card = lookup(p.name)
+      out[#out + 1] = { row = i, name = card and card.name or p.name }
+    end
+  end
+  return out
+end
+
+--- Move the card lines at `rows` (all below `row`) into a block directly
+--- under `row`, sorted by mana value. A blank line separates the block from
+--- cards that were already under `row`. Returns the new lines `row + 1..`.
+---@param lines string[]
+---@param row integer
+---@param rows integer[]
+---@param lookup fun(name: string): table|nil
+---@return string[]
+function M.gather(lines, row, rows, lookup)
+  local take = {}
+  for _, r in ipairs(rows) do
+    take[r] = true
+  end
+  local block, rest = {}, {}
+  for i = row + 1, #lines do
+    local list = take[i] and block or rest
+    list[#list + 1] = lines[i]
+  end
+  for i, l in ipairs(block) do
+    block[i] = { line = l, parsed = parse.parse(l) }
+  end
+  local out = sort_block(block, lookup)
+  if #out > 0 and rest[1] and not parse.is_divider(parse.parse(rest[1])) then
+    out[#out + 1] = ''
+  end
+  for _, l in ipairs(rest) do
+    out[#out + 1] = l
+  end
+  return out
+end
+
 return M

@@ -57,7 +57,7 @@ A `// count cards` line shows the deck's size, split into lands and nonlands, su
 | Command | |
 |---|---|
 | `:Scryvim search [query]` | Scryfall search → results popup → insert or increment |
-| `:[range]Scryvim sort` | Sort by mana value (block under cursor without a range) |
+| `:[range]Scryvim sort` | Sort by mana value (block under cursor without a range; on a count line, gathers its matching cards under it) |
 | `:[range]Scryvim count <query>` | Count cards matching a Scryfall query, by quantity (whole deck minus sideboard without a range) |
 | `:[range]Scryvim mana` | Count mana symbols in mana costs by type, by quantity (whole deck minus sideboard without a range) |
 | `:Scryvim pane` | Toggle the preview pane on the right |

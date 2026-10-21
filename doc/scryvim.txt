@@ -92,6 +92,14 @@ Set codes and collector numbers are preserved but ignored for lookups.
     on its own: spells by mana value then name, then lands by name, then
     unknown cards in their original order.
 
+    On a `// count: {query}` line (see |scryvim-count-lines|), gathers the
+    cards below it that match {query} into a block directly under it,
+    sorted the same way. Cards above the line stay put, so a stack of count lines can
+    peel the deck into groups, top to bottom. A blank line separates the
+    block from cards that were already under the line. A count line in the
+    main deck takes main-deck cards only; one inside a Sideboard or
+    Maybeboard section takes cards from that section.
+
 :[range]Scryvim count {query}                             *:Scryvim-count*
     Count the cards that match {query} (full Scryfall syntax), by quantity:
     20 Mountains and 5 other red sources make 25 for `produces:r`. Without a
