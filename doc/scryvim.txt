@@ -141,7 +141,9 @@ They also turn off with `counts = false`.
     Toggle the preview pane, a split on the right of the tab that follows
     the cursor in deck windows:
 
-    - on a card line, the card, as |vim.lsp.buf.hover()| shows it,
+    - on a card line, the card, as |vim.lsp.buf.hover()| shows it but
+      with more room: a rule under the type line and a blank line
+      between abilities,
     - on a count line (|scryvim-count-lines|), the total and the cards it
       counts, most copies first,
     - on a `// count mana symbols` line, the totals and the cards with

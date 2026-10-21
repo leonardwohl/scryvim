@@ -11,17 +11,27 @@ function M.mana_cost(card)
   return nonempty(card.mana_cost) or (face and nonempty(face.mana_cost)) or nil
 end
 
-local function block(face)
+local function block(face, spacious)
   local out = {}
   local cost = nonempty(face.mana_cost)
   out[#out + 1] = '**' .. face.name .. '**' .. (cost and ('  ' .. cost) or '')
   if nonempty(face.type_line) then
     out[#out + 1] = '*' .. face.type_line .. '*'
   end
-  -- One line per ability, with no blank lines between: previews show the
-  -- markdown as written, so every blank line costs a row.
+  if spacious then
+    out[#out + 1] = ''
+    out[#out + 1] = '---'
+  end
+  -- Compact: one line per ability, with no blank lines between, since
+  -- previews show the markdown as written and every blank line costs a row.
   if nonempty(face.oracle_text) then
-    out[#out + 1] = face.oracle_text
+    if spacious then
+      out[#out + 1] = ''
+      -- Each ability is its own paragraph in markdown.
+      out[#out + 1] = (face.oracle_text:gsub('\n', '\n\n'))
+    else
+      out[#out + 1] = face.oracle_text
+    end
   end
   local stats
   if face.power or face.toughness then
@@ -32,25 +42,32 @@ local function block(face)
     stats = 'Defense: ' .. face.defense
   end
   if stats then
+    if spacious then
+      out[#out + 1] = ''
+    end
     out[#out + 1] = stats
   end
   return table.concat(out, '\n')
 end
 
 --- Hover and preview markdown. Multi-face cards get one block per face,
---- separated by a blank line.
+--- separated by a blank line. With `opts.spacious`, for the preview pane,
+--- a rule follows the type line, abilities are separate paragraphs and
+--- faces are divided by rules.
 ---@param card table
+---@param opts? { spacious: boolean }
 ---@return string
-function M.markdown(card)
+function M.markdown(card, opts)
+  local spacious = opts and opts.spacious
   local blocks = {}
   if card.card_faces and #card.card_faces > 0 then
     for _, face in ipairs(card.card_faces) do
-      blocks[#blocks + 1] = block(face)
+      blocks[#blocks + 1] = block(face, spacious)
     end
   else
-    blocks[1] = block(card)
+    blocks[1] = block(card, spacious)
   end
-  return table.concat(blocks, '\n\n')
+  return table.concat(blocks, spacious and '\n\n---\n\n' or '\n\n')
 end
 
 --- `<mana_cost> · <type_line>`, omitting empty parts.
