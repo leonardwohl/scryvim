@@ -163,9 +163,10 @@ They also turn off with `counts = false`.
     mana value, with a different source for each colored symbol: a dual
     land pays either color, but only one symbol. Hybrid symbols take
     either color; Phyrexian and `{2/X}` symbols need no colored source.
-    Below the odds, the chance of having the colors once you have enough
-    sources, which is the figure Karsten's tables aim at 90% for, and the
-    sources of each color.
+    Below the odds, on the play, the two halves: the chance of drawing
+    enough sources, and the chance of having the colors once you have
+    enough sources, which is the figure Karsten's tables aim at 90% for.
+    Last, the sources of each color.
 
     Sources are the main deck's lands, by the mana they produce, plus
     mana creatures and rocks with a lower mana value than the card. Lands

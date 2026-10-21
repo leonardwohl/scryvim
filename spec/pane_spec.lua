@@ -92,9 +92,9 @@ describe('pane', function()
       '',
       '---',
       '',
-      '**On curve: turn 1**',
+      'On curve (turn 1): 100% on the play, 100% on the draw',
       '',
-      '100% on the play, 100% on the draw',
+      '100% to draw 1 source',
       '',
       '100% to have the colors with 1 source',
       '',
@@ -105,9 +105,9 @@ describe('pane', function()
   it('counts only the sources of the colors a card needs', function()
     local out = content(4)
     assert.are.same({
-      '**On curve: turn 2**',
+      'On curve (turn 2): 0% on the play, 0% on the draw',
       '',
-      '0% on the play, 0% on the draw',
+      '100% to draw 2 sources',
       '',
       '0% to have the colors with 2 sources',
       '',
@@ -122,14 +122,19 @@ describe('pane', function()
       out = text
     end)
     local heads = vim.tbl_filter(function(l)
-      return l:match('^%*%*On curve')
+      return l:match(' on curve ')
     end, out)
-    assert.are.same({ '**On curve: Fire, turn 2**', '**On curve: Ice, turn 2**' }, heads)
+    assert.are.same(
+      { 'Fire on curve (turn 2)', 'Ice on curve (turn 2)' },
+      vim.tbl_map(function(l)
+        return l:match('^[^:]*')
+      end, heads)
+    )
   end)
 
   it('shows no odds for lands', function()
     local out = content(5)
-    assert.is_nil(table.concat(out, '\n'):find('On curve'))
+    assert.is_nil(table.concat(out, '\n'):find('[Oo]n curve'))
   end)
 
   it('lists the cards a count line counts, without the sideboard', function()

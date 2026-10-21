@@ -385,11 +385,12 @@ function M.cards_seen(turn, draw)
 end
 
 --- The on-curve odds of casting `cost` from `deck`, or nil for a cost with
---- mana value 0. `colors` is the chance of having the colors given enough
---- sources, on the play.
+--- mana value 0. On the play, `enough` is the chance of drawing as many
+--- sources as the mana value, and `colors` the chance of having the
+--- colors given that many.
 ---@param deck table
 ---@param cost string
----@return { turn: integer, play: number, draw: number, colors: number|nil, pips: integer[], pool: table }|nil
+---@return { turn: integer, play: number, draw: number, enough: number, colors: number|nil, pips: integer[], pool: table }|nil
 function M.odds(deck, cost)
   local req = M.requirements(cost)
   if req.mv == 0 then
@@ -402,7 +403,7 @@ function M.odds(deck, cost)
   if #req.pips > 0 then
     colors = enough > 0 and play / enough or 0
   end
-  return { turn = req.mv, play = play, draw = draw, colors = colors, pips = req.pips, pool = pool }
+  return { turn = req.mv, play = play, draw = draw, enough = enough, colors = colors, pips = req.pips, pool = pool }
 end
 
 --- Symbol types in `mask`, in display order: `{W}{U}`.
