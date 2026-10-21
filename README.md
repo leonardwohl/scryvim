@@ -57,17 +57,21 @@ A `// count mana symbols` line shows the deck's mana symbols by type, such as `{
 | `:[range]Scryvim sort` | Sort by mana value (block under cursor without a range) |
 | `:[range]Scryvim count <query>` | Count cards matching a Scryfall query, by quantity (whole deck minus sideboard without a range) |
 | `:[range]Scryvim mana` | Count mana symbols in mana costs by type, by quantity (whole deck minus sideboard without a range) |
+| `:Scryvim pane` | Toggle the preview pane on the right |
 | `:Scryvim update` | Refresh card data now |
 | `:Scryvim info` | Card count and cache age |
 
-No default keymaps. `<Plug>(scryvim-search)` and `<Plug>(scryvim-sort)` are provided:
+No default keymaps. `<Plug>(scryvim-search)`, `<Plug>(scryvim-sort)` and `<Plug>(scryvim-pane)` are provided:
 
 ```lua
 vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
 vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
+vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 ```
 
 Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
+
+Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card as hover does, a count line lists the cards it counts, and a `// count mana symbols` line lists the cards with mana symbols. Set `pane = { auto_open = true }` to open it with every deck.
 
 Hover (`K`), code actions (`gra`) and diagnostics come from the built-in LSP client.
 
@@ -87,6 +91,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   counts        = true,
   picker        = 'buffer',    -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },
+  pane          = { width = 50, auto_open = false },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```
