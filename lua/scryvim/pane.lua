@@ -1,7 +1,7 @@
 --- Preview pane: a split on the right of the tab that follows the cursor in
 --- deck windows. A card line shows the card, spaced out more than hover since
 --- the pane has the room. A count line lists
---- the deck cards it counts, a mana symbols line the cards with symbols, and
+--- the deck cards it counts, a mana symbols line each type's share, and
 --- a cards line every deck card.
 --- Below a nonland card are its odds of being cast on curve.
 local colors = require('scryvim.colors')
@@ -18,6 +18,9 @@ local M = {}
 
 --- Delay after a cursor move, so holding `j` draws once at the end.
 M.MOVE_MS = 30
+
+--- Columns of the bar for a mana type with every symbol.
+M.BAR_WIDTH = 20
 
 -- Tabpage -> { win, buf, timer, generation, tick }.
 local panes = {} ---@type table<integer, table>
@@ -52,6 +55,30 @@ local function percent(p)
     return '<1%'
   end
   return n .. '%'
+end
+
+--- Each mana type's share of all the symbols, with a bar: `{R}  66%  ███`.
+local function mana_shares(totals)
+  local sum = 0
+  for _, t in ipairs(symbols.TYPES) do
+    sum = sum + (totals[t] or 0)
+  end
+  if sum == 0 then
+    return {}
+  end
+  local out = { '' }
+  for _, t in ipairs(symbols.TYPES) do
+    local v = totals[t] or 0
+    if v > 0 then
+      local share = v / sum
+      out[#out + 1] = ('{%s}  %4s  %s'):format(
+        t,
+        percent(share),
+        ('█'):rep(math.max(1, math.floor(share * M.BAR_WIDTH + 0.5)))
+      )
+    end
+  end
+  return out
 end
 
 -- Odds for the deck last shown, by mana cost, so moving between cards
@@ -157,12 +184,8 @@ function M.content(lines, row, cb)
     if not data.ready() then
       return cb({ '*scryvim: card data is not loaded yet*' })
     end
-    local with = vim.tbl_filter(function(e)
-      local card = data.get(e.name)
-      return card and next(symbols.card(card)) ~= nil
-    end, entries)
-    local out = { '**Mana symbols**  ' .. symbols.format(symbols.entries(entries, data.get)), '' }
-    return cb(vim.list_extend(out, card_list(with)))
+    local totals = symbols.entries(entries, data.get)
+    return cb(vim.list_extend({ '**Mana symbols**  ' .. symbols.format(totals) }, mana_shares(totals)))
   end
   if cards then
     local total, breakdown = tally.cards(entries)

@@ -156,8 +156,8 @@ They also turn off with `counts = false`.
       on curve (|scryvim-on-curve|),
     - on a count line (|scryvim-count-lines|), the total and the cards it
       counts, most copies first,
-    - on a `// count mana symbols` line, the totals and the cards with
-      mana symbols,
+    - on a `// count mana symbols` line, the totals and each type's share
+      of all the symbols, as a percentage and a bar,
     - on a `// count cards` line, the deck size and every card in the
       deck.
 
