@@ -173,6 +173,14 @@ function M.mana(bufnr, first, last)
   vim.notify('Mana symbols: ' .. symbols.format(symbols.entries(entries, data.get)), vim.log.levels.INFO)
 end
 
+--- Deck stats for 'statusline' and 'winbar': the deck's size and mana
+--- symbols, as `%{%v:lua.require'scryvim'.statusline()%}`.
+---@param opts? { cards?: boolean, lands?: boolean, mana?: boolean }
+---@return string
+function M.statusline(opts)
+  return require('scryvim.statusline').statusline(opts)
+end
+
 --- Toggle the preview pane on the right of the current tab.
 function M.pane()
   require('scryvim.pane').toggle()
