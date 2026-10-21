@@ -71,7 +71,9 @@ vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 
 Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
 
-Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, a count line lists the cards it counts, and a `// count mana symbols` line lists the cards with mana symbols. Set `pane = { auto_open = true }` to open it with every deck.
+Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, and its odds of being cast on curve, a count line lists the cards it counts, and a `// count mana symbols` line lists the cards with mana symbols. Set `pane = { auto_open = true }` to open it with every deck.
+
+The on-curve odds follow Frank Karsten's hypergeometric model: the chance to have enough mana sources, in the right colors, on the turn equal to the card's mana value, on the play and on the draw, without mulligans. A dual land counts for either color but pays only one symbol. Sources are lands, plus mana creatures and rocks that cost less than the card; fetch lands count as every color.
 
 Hover (`K`), code actions (`gra`) and diagnostics come from the built-in LSP client.
 

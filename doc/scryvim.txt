@@ -143,7 +143,8 @@ They also turn off with `counts = false`.
 
     - on a card line, the card, as |vim.lsp.buf.hover()| shows it but
       with more room: a rule under the type line and a blank line
-      between abilities,
+      between abilities, and below a nonland card its odds of being cast
+      on curve (|scryvim-on-curve|),
     - on a count line (|scryvim-count-lines|), the total and the cards it
       counts, most copies first,
     - on a `// count mana symbols` line, the totals and the cards with
@@ -153,6 +154,22 @@ They also turn off with `counts = false`.
     second, like count lines. `:q` in the last other window closes the
     pane too. Set its width with `pane.width`, and open it with every deck
     with `pane.auto_open`.
+
+                                                        *scryvim-on-curve*
+    On curve odds follow Frank Karsten's hypergeometric model: the chance
+    of casting the card on the turn equal to its mana value, seeing 7
+    cards plus one a turn after the first on the play, one more on the
+    draw, with no mulligans. Casting needs as many mana sources as the
+    mana value, with a different source for each colored symbol: a dual
+    land pays either color, but only one symbol. Hybrid symbols take
+    either color; Phyrexian and `{2/X}` symbols need no colored source.
+    Below the odds, the chance of having the colors once you have enough
+    sources, which is the figure Karsten's tables aim at 90% for, and the
+    sources of each color.
+
+    Sources are the main deck's lands, by the mana they produce, plus
+    mana creatures and rocks with a lower mana value than the card. Lands
+    that search for lands, such as fetch lands, count as every color.
 
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now.
