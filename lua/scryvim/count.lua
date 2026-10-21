@@ -9,14 +9,9 @@ local parse = require('scryvim.parse')
 
 local M = {}
 
-M.SEARCH_URL = 'https://api.scryfall.com/cards/search?q='
-
 --- Scryfall silently truncates longer queries (measured: 1002 bytes worked,
 --- 1039 did not), which surfaces as an "unclosed parentheses" error.
 M.MAX_QUERY = 1000
-
---- Sections whose cards are not counted unless a range is given.
-local SIDE_SECTIONS = { sideboard = true, maybeboard = true }
 
 --- `cache[query][lower full name] = matched`, for this session.
 local cache = {}
@@ -32,8 +27,8 @@ function M.entries(lines, lookup, all)
   for _, line in ipairs(lines) do
     local p = parse.parse(line)
     if p.kind == 'section' then
-      side = SIDE_SECTIONS[p.name:lower()] or false
-    elseif p.kind == 'card' and (all or not (side or p.prefix:match('^%s*[Ss][Bb]:'))) then
+      side = parse.SIDE_SECTIONS[p.name:lower()] or false
+    elseif p.kind == 'card' and (all or not (side or parse.is_sb(p))) then
       local card = lookup(p.name)
       local name = card and card.name or p.name
       local key = name:lower()
@@ -133,7 +128,7 @@ function M.run(query, entries, cb)
 
   local pending, failed = #batches, nil
   for _, batch in ipairs(batches) do
-    http.get_json(M.SEARCH_URL .. http.urlencode(M.build_query(query, batch)), function(gerr, obj)
+    http.get_json(http.SEARCH_URL .. http.urlencode(M.build_query(query, batch)), function(gerr, obj)
       -- Scryfall drops terms it can't parse and warns; without them a typo
       -- like `prodces:r` would match the whole deck.
       local warnings = obj and type(obj.warnings) == 'table' and #obj.warnings > 0 and obj.warnings

@@ -7,6 +7,7 @@ local CARDS = {
   ['wrath of god'] = { name = 'Wrath of God', cmc = 4, type_line = 'Sorcery' },
   ['island'] = { name = 'Island', cmc = 0, type_line = 'Basic Land — Island' },
   ['forest'] = { name = 'Forest', cmc = 0, type_line = 'Basic Land — Forest' },
+  ['badlands'] = { name = 'Badlands', cmc = 0, type_line = 'Land — Swamp Mountain' },
   ["emeria's call"] = {
     name = "Emeria's Call // Emeria, Shattered Skyclave",
     cmc = 7,
@@ -70,9 +71,9 @@ describe('sort', function()
     }, out)
   end)
 
-  it('uses the front face to decide whether a card is a land', function()
-    local out = sort.lines({ "1 Emeria's Call", '1 Island' }, lookup)
-    assert.are.same({ "1 Emeria's Call", '1 Island' }, out)
+  it('sorts a card with a land on any face into the land group', function()
+    local out = sort.lines({ "1 Emeria's Call", '1 Badlands', '1 Wrath of God' }, lookup)
+    assert.are.same({ '1 Wrath of God', '1 Badlands', "1 Emeria's Call" }, out)
   end)
 
   it('finds the block under a row', function()

@@ -6,6 +6,9 @@ M.version = '0.1.0'
 local USER_AGENT = 'scryvim/' .. M.version
 local ACCEPT = 'application/json;q=0.9,*/*;q=0.8'
 
+--- Prefix for `/cards/search` requests; append the urlencoded query.
+M.SEARCH_URL = 'https://api.scryfall.com/cards/search?q='
+
 local SLOW = { ['/cards/search'] = true, ['/cards/named'] = true, ['/cards/collection'] = true }
 local SLOW_MS, FAST_MS = 500, 100
 

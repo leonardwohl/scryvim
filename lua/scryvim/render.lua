@@ -70,6 +70,14 @@ function M.markdown(card, opts)
   return table.concat(blocks, spacious and '\n\n---\n\n' or '\n\n')
 end
 
+--- `1 card`, `2 cards`: `n` and `word`, with an `s` unless `n` is 1.
+---@param n integer
+---@param word string
+---@return string
+function M.plural(n, word)
+  return ('%d %s%s'):format(n, word, n == 1 and '' or 's')
+end
+
 --- `<mana_cost> · <type_line>`, omitting empty parts.
 function M.detail(card)
   local cost = M.mana_cost(card)

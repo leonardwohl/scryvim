@@ -98,10 +98,6 @@ local function odds_for(deck, cost)
   return hit or nil
 end
 
-local function plural(n, word)
-  return ('%d %s%s'):format(n, word, n == 1 and '' or 's')
-end
-
 --- The on-curve section for `card` in the deck `entries`: per nonland face
 --- with a mana cost, the chance to cast it on the turn of its mana value.
 local function curve_lines(card, entries)
@@ -128,14 +124,14 @@ local function curve_lines(card, entries)
       if pool.lands + pool.others == 0 then
         out[#out + 1] = '*No mana sources in the deck*'
       else
-        local of = plural(pool.lands, 'land')
+        local of = render.plural(pool.lands, 'land')
         if pool.others > 0 then
-          of = of .. ' and ' .. plural(pool.others, 'other source')
+          of = of .. ' and ' .. render.plural(pool.others, 'other source')
         end
         vim.list_extend(out, {
           ('%s: %s on the play, %s on the draw'):format(head, percent(odds.play), percent(odds.draw)),
           '',
-          ('%s to draw %s'):format(percent(odds.enough), plural(odds.turn, 'source')),
+          ('%s to draw %s'):format(percent(odds.enough), render.plural(odds.turn, 'source')),
         })
         if odds.colors then
           local seen, sources = {}, {}
@@ -147,7 +143,7 @@ local function curve_lines(card, entries)
           end
           vim.list_extend(out, {
             '',
-            ('%s to have the colors with %s'):format(percent(odds.colors), plural(odds.turn, 'source')),
+            ('%s to have the colors with %s'):format(percent(odds.colors), render.plural(odds.turn, 'source')),
             '',
             ('Sources: %s of %s'):format(table.concat(sources, '  '), of),
           })
