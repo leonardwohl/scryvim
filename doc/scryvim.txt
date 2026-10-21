@@ -137,6 +137,15 @@ totals at its end, updated with the deck: >
 <
 They also turn off with `counts = false`.
 
+                                                        *scryvim-card-lines*
+A `// count cards` (or `# count cards`) line shows the number of cards in
+the deck, by quantity, split into lands and nonlands. It covers the same
+lines as |:Scryvim-count| without a range, so the sideboard and
+maybeboard are left out. The split shows once card data is loaded: >
+    // count cards                       60 cards  24 lands  36 nonlands
+<
+They also turn off with `counts = false`.
+
 :Scryvim pane                                              *:Scryvim-pane*
     Toggle the preview pane, a split on the right of the tab that follows
     the cursor in deck windows:
@@ -148,7 +157,9 @@ They also turn off with `counts = false`.
     - on a count line (|scryvim-count-lines|), the total and the cards it
       counts, most copies first,
     - on a `// count mana symbols` line, the totals and the cards with
-      mana symbols.
+      mana symbols,
+    - on a `// count cards` line, the deck size and every card in the
+      deck.
 
     Other lines leave the pane as it is. After an edit the pane waits a
     second, like count lines. `:q` in the last other window closes the

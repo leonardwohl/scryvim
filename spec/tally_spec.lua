@@ -21,6 +21,15 @@ describe('tally.query', function()
     assert.is_false(tally.is_mana('// mana symbols'))
     assert.is_nil(tally.query('// count mana symbols'))
   end)
+
+  it('reads card count lines', function()
+    assert.is_true(tally.is_cards('// count cards'))
+    assert.is_true(tally.is_cards('  # Count  Cards  '))
+    assert.is_false(tally.is_cards('// count cards: t:land'))
+    assert.is_false(tally.is_cards('// cards'))
+    assert.is_false(tally.is_mana('// count cards'))
+    assert.is_nil(tally.query('// count cards'))
+  end)
 end)
 
 describe('tally', function()
@@ -199,5 +208,20 @@ describe('tally mana symbols', function()
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '// count: t:land', '# count mana symbols', '20 Island' })
     tally.attach(buf)
     settle({ [0] = '0 cards', [1] = 'no mana symbols' })
+  end)
+
+  it('shows the deck size with lands and nonlands, without the sideboard', function()
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+      '// count cards',
+      '4 Counterspell',
+      '1 Wrath of God',
+      '20 Island',
+      'Sideboard',
+      '3 Duress',
+    })
+    tally.attach(buf)
+    settle({ [0] = '25 cards  20 lands  5 nonlands' })
+    vim.api.nvim_buf_set_lines(buf, 1, 2, false, {})
+    settle({ [0] = '21 cards  20 lands  1 nonland' })
   end)
 end)

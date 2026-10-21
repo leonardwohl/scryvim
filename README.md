@@ -47,9 +47,12 @@ Comment lines like these show how many cards in the deck match, by quantity, and
 // count removal: otag:removal
 // count red sources: produces:r
 // count mana symbols
+// count cards
 ```
 
 A `// count mana symbols` line shows the deck's mana symbols by type, such as `{W} 12  {R} 23.5  {C} 2`. Hybrid symbols count half for each half (`{R/G}` is 0.5 R and 0.5 G, `{2/R}` is 0.5 R), Phyrexian symbols count half (`{R/P}` is 0.5 R), and generic mana doesn't count. Cards with two mana costs, such as adventures, split and modal double-faced cards, count both.
+
+A `// count cards` line shows the deck's size, split into lands and nonlands, such as `60 cards  24 lands  36 nonlands`. Like the other count lines, it leaves out the sideboard and maybeboard.
 
 | Command | |
 |---|---|
@@ -71,7 +74,7 @@ vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 
 Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
 
-Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, and its odds of being cast on curve, a count line lists the cards it counts, and a `// count mana symbols` line lists the cards with mana symbols. Set `pane = { auto_open = true }` to open it with every deck.
+Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, and its odds of being cast on curve, a count line lists the cards it counts, a `// count mana symbols` line lists the cards with mana symbols, and a `// count cards` line lists every card in the deck. Set `pane = { auto_open = true }` to open it with every deck.
 
 The on-curve odds follow Frank Karsten's hypergeometric model: the chance to have enough mana sources, in the right colors, on the turn equal to the card's mana value, on the play and on the draw, without mulligans. A dual land counts for either color but pays only one symbol. Sources are lands, plus mana creatures and rocks that cost less than the card; fetch lands count as every color.
 
