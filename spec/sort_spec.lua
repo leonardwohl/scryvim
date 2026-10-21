@@ -81,4 +81,128 @@ describe('sort', function()
     assert.are.same({ 5, 5 }, { sort.block_at(lines, 5) })
     assert.is_nil(sort.block_at(lines, 1))
   end)
+
+  it('picks main-deck cards below a count line', function()
+    local lines = {
+      '1 Counterspell',
+      '// count: t:instant',
+      '1 Brainstorm',
+      'SB: 1 Island',
+      'lightning bolt',
+      'Sideboard',
+      '1 Wrath of God',
+    }
+    assert.are.same(
+      { { row = 3, name = 'Brainstorm' }, { row = 5, name = 'Lightning Bolt' } },
+      sort.candidates(lines, 2, lookup)
+    )
+  end)
+
+  it('picks only its own section for a count line in the sideboard', function()
+    local lines = {
+      '1 Brainstorm',
+      'Sideboard',
+      '// count: t:instant',
+      '1 Counterspell',
+      'Maybeboard',
+      '1 Lightning Bolt',
+    }
+    assert.are.same({ { row = 4, name = 'Counterspell' } }, sort.candidates(lines, 3, lookup))
+  end)
+
+  it('gathers rows into a sorted block under the count line', function()
+    local lines = {
+      '1 Island',
+      '// count: t:instant',
+      '1 Forest',
+      '',
+      '// creatures',
+      '1 Counterspell',
+      '1 Wrath of God',
+      '1 Lightning Bolt',
+    }
+    assert.are.same({
+      '1 Lightning Bolt',
+      '1 Counterspell',
+      '',
+      '1 Forest',
+      '',
+      '// creatures',
+      '1 Wrath of God',
+    }, sort.gather(lines, 2, { 6, 8 }, lookup))
+  end)
+
+  it('adds no separator when a divider already follows the block', function()
+    local lines = { '// count: t:instant', '1 Counterspell', '', '1 Brainstorm' }
+    assert.are.same({ '1 Brainstorm', '1 Counterspell', '' }, sort.gather(lines, 1, { 2, 4 }, lookup))
+  end)
+end)
+
+describe('sort on a count line', function()
+  local helpers = require('helpers')
+  local http = require('scryvim.http')
+  local orig = http.get_json
+  local buf
+
+  before_each(function()
+    helpers.block_network()
+    helpers.load_fixture()
+    require('scryvim.count')._reset()
+    -- Scryfall stand-in: instants match `t:instant`.
+    http.get_json = function(url, cb)
+      local query = vim.uri_decode(url:match('q=(.*)$'))
+      local out = {}
+      for name in query:gmatch('!"(.-)"') do
+        local card = require('scryvim.data').get(name)
+        if card and card.type_line:find('Instant') then
+          out[#out + 1] = { name = card.name }
+        end
+      end
+      vim.schedule(function()
+        cb(nil, { object = 'list', data = out })
+      end)
+    end
+    buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_current_buf(buf)
+  end)
+
+  after_each(function()
+    http.get_json = orig
+    vim.api.nvim_buf_delete(buf, { force = true })
+  end)
+
+  local function run(lines, row)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_win_set_cursor(0, { row, 0 })
+    local tick = vim.api.nvim_buf_get_changedtick(buf)
+    require('scryvim').sort()
+    vim.wait(1000, function()
+      return vim.api.nvim_buf_get_changedtick(buf) ~= tick
+    end, 10)
+    return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  end
+
+  it('moves matching cards below the line into a block under it', function()
+    local out = run({
+      '1 Brainstorm',
+      '// count removal: t:instant',
+      '4 Llanowar Elves',
+      '2 Counterspell',
+      '4 Lightning Bolt',
+      '20 Forest',
+      'Sideboard',
+      '2 Fire // Ice',
+    }, 2)
+    assert.are.same({
+      '1 Brainstorm',
+      '// count removal: t:instant',
+      '4 Lightning Bolt',
+      '2 Counterspell',
+      '',
+      '4 Llanowar Elves',
+      '20 Forest',
+      'Sideboard',
+      '2 Fire // Ice',
+    }, out)
+  end)
 end)

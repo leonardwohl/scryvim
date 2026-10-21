@@ -25,7 +25,8 @@ function M.search(query)
 end
 
 --- Sort lines `first..last` (1-based, inclusive) by mana value. Without a
---- range, sorts the block under the cursor.
+--- range, sorts the block under the cursor, or on a count line gathers
+--- its matching cards under it.
 ---@param bufnr? integer
 ---@param first? integer
 ---@param last? integer
@@ -40,7 +41,12 @@ function M.sort(bufnr, first, last)
   end
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   if not first then
-    first, last = sort.block_at(lines, vim.api.nvim_win_get_cursor(0)[1])
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    local query = require('scryvim.tally').query(lines[row])
+    if query then
+      return M.gather(bufnr, row, query, lines)
+    end
+    first, last = sort.block_at(lines, row)
     if not first then
       return
     end
@@ -50,6 +56,54 @@ function M.sort(bufnr, first, last)
   if not vim.deep_equal(segment, sorted) then
     vim.api.nvim_buf_set_lines(bufnr, first - 1, last, false, sorted)
   end
+end
+
+--- Move the cards below the count line at `row` that match `query` into a
+--- block directly under it, sorted by mana value. Cards above stay put.
+---@param bufnr integer
+---@param row integer
+---@param query string
+---@param lines string[]
+function M.gather(bufnr, row, query, lines)
+  local data = require('scryvim.data')
+  local sort = require('scryvim.sort')
+  local candidates = sort.candidates(lines, row, data.get)
+  if #candidates == 0 then
+    return
+  end
+  local entries, seen = {}, {}
+  for _, c in ipairs(candidates) do
+    if not seen[c.name:lower()] then
+      seen[c.name:lower()] = true
+      entries[#entries + 1] = { name = c.name, count = 1 }
+    end
+  end
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+  require('scryvim.count').run(query, entries, function(err, result)
+    if err then
+      vim.notify('scryvim: ' .. err, vim.log.levels.ERROR)
+      return
+    end
+    if not vim.api.nvim_buf_is_valid(bufnr) or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+      vim.notify('scryvim: buffer changed while sorting; run sort again', vim.log.levels.WARN)
+      return
+    end
+    local matched = {}
+    for _, e in ipairs(result.matches) do
+      matched[e.name:lower()] = true
+    end
+    local rows = {}
+    for _, c in ipairs(candidates) do
+      if matched[c.name:lower()] then
+        rows[#rows + 1] = c.row
+      end
+    end
+    local tail = vim.list_slice(lines, row + 1)
+    local gathered = sort.gather(lines, row, rows, data.get)
+    if not vim.deep_equal(tail, gathered) then
+      vim.api.nvim_buf_set_lines(bufnr, row, -1, false, gathered)
+    end
+  end)
 end
 
 --- Count deck cards matching the Scryfall `query`, by quantity. Counts
