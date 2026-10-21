@@ -7,7 +7,6 @@ local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
 local data = require('scryvim.data')
-local icons = require('scryvim.icons')
 local render = require('scryvim.render')
 local symbols = require('scryvim.symbols')
 
@@ -84,14 +83,6 @@ local function mark(buf, row, virt_text)
   })
 end
 
-local function mana_text(totals)
-  local color = config.get().colors
-  return vim.tbl_map(function(chunk)
-    local hl = chunk[2] and color and { 'LspInlayHint', colors.group(chunk[2]) } or 'LspInlayHint'
-    return { icons.replace(chunk[1]), hl }
-  end, symbols.chunks(totals))
-end
-
 --- Recount every count line in `buf` now.
 ---@param buf integer
 function M.refresh(buf)
@@ -120,7 +111,7 @@ function M.refresh(buf)
   local entries = count.entries(lines, data.get)
   local stats = count.stats(entries, data.ready() and data.get or nil)
   -- Mana symbols are counted locally, so they wait for the card data.
-  local mana = stats.mana and mana_text(stats.mana)
+  local mana = stats.mana and colors.virt_text(symbols.format(stats.mana), 'LspInlayHint', config.get().colors)
   local total, breakdown = cards_text(stats)
   local cards = { { breakdown and total .. '  ' .. breakdown or total, 'LspInlayHint' } }
   local results = {}

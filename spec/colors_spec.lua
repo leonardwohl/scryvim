@@ -29,6 +29,28 @@ describe('colors', function()
     assert.are.same({ { 'Bolt ' }, { '{R}', 'ScryvimManaRed' } }, colors.segments('Bolt {R}'))
   end)
 
+  it('turns mana text into extmark virt_text', function()
+    assert.are.same({
+      { 'Bolt ', 'LspInlayHint' },
+      { '{R}', { 'LspInlayHint', 'ScryvimManaRed' } },
+    }, colors.virt_text('Bolt {R}', 'LspInlayHint', true))
+    assert.are.same(
+      { { 'Bolt ', 'LspInlayHint' }, { '{R}', 'LspInlayHint' } },
+      colors.virt_text('Bolt {R}', 'LspInlayHint', false)
+    )
+  end)
+
+  it('colors deck totals, with colorless and snow as colorless', function()
+    assert.are.same({
+      { '{W}', 'white' },
+      { ' 3  ' },
+      { '{C}', 'colorless' },
+      { ' 1  ' },
+      { '{S}', 'colorless' },
+      { ' 2' },
+    }, colors.mana_chunks('{W} 3  {C} 1  {S} 2'))
+  end)
+
   it('colors each half of a hybrid symbol on every path', function()
     vim.api.nvim_set_hl(0, 'ScryvimManaWhite', { fg = '#ffffff' })
     vim.api.nvim_set_hl(0, 'ScryvimManaBlue', { fg = '#0000ff' })

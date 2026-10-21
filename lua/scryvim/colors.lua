@@ -70,6 +70,19 @@ function M.group(color)
   return 'ScryvimMana' .. color:sub(1, 1):upper() .. color:sub(2)
 end
 
+--- Extmark `virt_text` for `text`, with icons as in `M.mana_chunks()`. With
+--- `colored`, each symbol is in `base_hl` combined with its color's group;
+--- otherwise everything is in `base_hl`.
+---@param text string
+---@param base_hl string
+---@param colored? boolean
+---@return { [1]: string, [2]: string|string[] }[]
+function M.virt_text(text, base_hl, colored)
+  return vim.tbl_map(function(chunk)
+    return { chunk[1], colored and chunk[2] and { base_hl, M.group(chunk[2]) } or base_hl }
+  end, M.mana_chunks(text))
+end
+
 --- `{ text, hl_group }` segments for a line, as picker list formatters take.
 ---@param text string
 ---@return { [1]: string, [2]: string|nil }[]
