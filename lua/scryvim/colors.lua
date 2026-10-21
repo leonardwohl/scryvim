@@ -91,9 +91,7 @@ end
 --- Color `buf` when it is an LSP float (hover) opened from a deck buffer.
 ---@param buf integer
 function M.highlight_float(buf)
-  local win = vim.fn.bufwinid(buf)
-  local source = win ~= -1 and vim.w[win].lsp_floating_bufnr
-  if source and vim.api.nvim_buf_is_valid(source) and vim.bo[source].filetype == 'deck' then
+  if require('scryvim.hover').deck_float(buf) then
     M.highlight_buf(buf)
   end
 end
