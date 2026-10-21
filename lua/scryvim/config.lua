@@ -12,6 +12,7 @@ local function defaults()
     counts = true,
     picker = 'buffer',
     search = { max_pages = 3 },
+    hover = { max_width = 60 },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end
@@ -49,6 +50,8 @@ local function validate(cfg)
   end, "one of 'buffer', 'auto', 'snacks', 'telescope', 'fzf_lua', 'select', or a table with pick()")
   vim.validate('search', cfg.search, 'table')
   vim.validate('search.max_pages', cfg.search.max_pages, 'number')
+  vim.validate('hover', cfg.hover, 'table')
+  vim.validate('hover.max_width', cfg.hover.max_width, 'number')
   vim.validate('cache_dir', cfg.cache_dir, 'string')
 end
 

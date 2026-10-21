@@ -87,6 +87,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   counts        = true,
   picker        = 'buffer',    -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },
+  hover         = { max_width = 60 },  -- 0 for no limit
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```

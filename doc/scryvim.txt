@@ -182,6 +182,7 @@ wins. `setup()` is optional. Defaults: >lua
       counts        = true,     -- see |scryvim-count-lines|
       picker        = 'buffer', -- see below
       search        = { max_pages = 3 },   -- 175 cards per page
+      hover         = { max_width = 60 },  -- columns; 0 for no limit
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <
