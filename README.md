@@ -78,6 +78,14 @@ Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the ri
 
 The on-curve odds follow Frank Karsten's hypergeometric model: the chance to have enough mana sources, in the right colors, on the turn equal to the card's mana value, on the play and on the draw, without mulligans. A dual land counts for either color but pays only one symbol. Sources are lands, plus mana creatures and rocks that cost less than the card; fetch lands count as every color.
 
+The deck's size and mana symbols can also live in your statusline or winbar, without a count line in the deck. Add `%{%v:lua.require'scryvim'.statusline()%}` to `statusline` or `winbar`, or with lualine.nvim, the `scryvim` component:
+
+```lua
+require('lualine').setup({ sections = { lualine_x = { 'scryvim', 'filetype' } } })
+```
+
+It shows `60 cards  {W} 12  {R} 23.5` in deck buffers and nothing elsewhere. See `:h scryvim-statusline` for options.
+
 Hover (`K`), code actions (`gra`) and diagnostics come from the built-in LSP client.
 
 ## Configuration
@@ -117,7 +125,7 @@ make lint    # stylua --check
 
 Two opt-in suites run in CI:
 
-- `SCRYVIM_TEST_PLUGINS=<dir>` drives the real snacks.nvim, telescope.nvim and fzf-lua pickers. `<dir>` holds checkouts of those three plus plenary.nvim, and `fzf` must be on `$PATH`.
+- `SCRYVIM_TEST_PLUGINS=<dir>` drives the real snacks.nvim, telescope.nvim and fzf-lua pickers and the lualine.nvim component. `<dir>` holds checkouts of those four plus plenary.nvim, and `fzf` must be on `$PATH`.
 - `SCRYVIM_LIVE=1 busted spec/live_spec.lua` talks to the real Scryfall API and downloads the full Oracle Cards file once.
 
 ## Disclaimer

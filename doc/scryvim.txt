@@ -12,6 +12,7 @@ CONTENTS                                                    *scryvim-contents*
   7. Card data ................................ |scryvim-data|
   8. Lua API .................................. |scryvim-api|
   9. Colors ................................... |scryvim-colors|
+  10. Statusline .............................. |scryvim-statusline|
 
 ==============================================================================
 1. INTRODUCTION                                                *scryvim-intro*
@@ -286,6 +287,8 @@ require('scryvim').mana({buf}, {first}, {last})
 require('scryvim').pane()                 Same as |:Scryvim-pane|.
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
+require('scryvim').statusline({opts})     Deck stats for 'statusline' and
+                                          'winbar'; see |scryvim-statusline|.
 
 ==============================================================================
 9. COLORS                                                    *scryvim-colors*
@@ -361,5 +364,40 @@ Relink or recolor any of them: >lua
     vim.api.nvim_set_hl(0, '@lsp.type.land.deck', { link = 'Comment' })
 <
 Changing `type_colors` takes effect after restarting Neovim.
+
+==============================================================================
+10. STATUSLINE                                           *scryvim-statusline*
+
+The deck's size and mana symbols can show in the statusline or winbar of
+deck windows, with no count line in the deck: >
+    60 cards  {W} 12  {R} 23.5
+<
+Like |scryvim-card-lines| and |scryvim-mana-lines|, they leave out the
+sideboard and maybeboard. Mana symbols show once card data is loaded, in
+their colors with `colors` on (|scryvim-colors|), and as icons with `icons`
+on. Outside deck buffers, and for decks with no cards, the text is empty.
+
+In 'statusline' or 'winbar', as a `%{% %}` item: >lua
+    vim.o.statusline = "%f %m%=%{%v:lua.require'scryvim'.statusline()%} %l:%c"
+<
+Or only in deck windows, from `after/ftplugin/deck.lua`: >lua
+    vim.wo.winbar = "%{%v:lua.require'scryvim'.statusline()%}"
+<
+With lualine.nvim, use the `scryvim` component: >lua
+    require('lualine').setup({
+      sections = { lualine_x = { 'scryvim', 'filetype' } },
+    })
+<
+Options, passed as `statusline({opts})` or as lualine component options
+(`{ 'scryvim', lands = true }`):
+
+    cards    `60 cards`, default true
+    lands    `24 lands`, default false
+    mana     mana symbols by type, default true
+
+The lualine component also takes `colored = false` for plain mana symbols.
+
+`require('scryvim.statusline').text({buf}, {opts})` gives the same text
+without highlights, for other statusline plugins.
 
 vim:tw=78:ts=8:ft=help:norl:
