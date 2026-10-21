@@ -1,10 +1,12 @@
 --- Saved counts in the deck file: `// count <label>: <query>` comment lines
 --- show how many deck cards match their query, refreshed as the deck
 --- changes. The optional label names the total: `40 red sources`.
---- `// count mana symbols` lines show the deck's mana symbols by type.
+--- `// count mana symbols` lines show the deck's mana symbols by type, and
+--- `// count cards` lines the deck's size.
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
+local curve = require('scryvim.curve')
 local data = require('scryvim.data')
 local symbols = require('scryvim.symbols')
 
@@ -39,12 +41,43 @@ function M.query(line)
   return q, label ~= '' and label or nil
 end
 
+local function is_special(line, pattern)
+  local rest = line:match('^%s*//%s*(.-)%s*$') or line:match('^%s*#%s*(.-)%s*$')
+  return rest ~= nil and rest:lower():match(pattern) ~= nil
+end
+
 --- Whether `line` is a `// count mana symbols` line.
 ---@param line string
 ---@return boolean
 function M.is_mana(line)
-  local rest = line:match('^%s*//%s*(.-)%s*$') or line:match('^%s*#%s*(.-)%s*$')
-  return rest ~= nil and rest:lower():match('^count%s+mana%s+symbols$') ~= nil
+  return is_special(line, '^count%s+mana%s+symbols$')
+end
+
+--- Whether `line` is a `// count cards` line.
+---@param line string
+---@return boolean
+function M.is_cards(line)
+  return is_special(line, '^count%s+cards$')
+end
+
+--- `60 cards` and `24 lands  36 nonlands` for the deck `entries`. The
+--- breakdown is nil until the card data is loaded, since lands need it.
+---@param entries { name: string, count: integer }[]
+---@return string total, string|nil breakdown
+function M.cards(entries)
+  local total, lands = 0, 0
+  for _, e in ipairs(entries) do
+    total = total + e.count
+    local card = data.ready() and data.get(e.name)
+    if card and curve.is_land(card) then
+      lands = lands + e.count
+    end
+  end
+  local function plural(n, word)
+    return ('%d %s%s'):format(n, word, n == 1 and '' or 's')
+  end
+  local breakdown = data.ready() and total > 0 and plural(lands, 'land') .. '  ' .. plural(total - lands, 'nonland')
+  return plural(total, 'card'), breakdown or nil
 end
 
 local function mark(buf, row, virt_text)
@@ -73,22 +106,26 @@ function M.refresh(buf)
   state.generation = state.generation + 1
   local generation = state.generation
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local rows, mana_rows = {}, {}
+  local rows, mana_rows, card_rows = {}, {}, {}
   for i, line in ipairs(lines) do
     local q, label = M.query(line)
     if q then
       rows[#rows + 1] = { row = i - 1, query = q, label = label }
     elseif M.is_mana(line) then
       mana_rows[#mana_rows + 1] = i - 1
+    elseif M.is_cards(line) then
+      card_rows[#card_rows + 1] = i - 1
     end
   end
-  if #rows == 0 and #mana_rows == 0 then
+  if #rows == 0 and #mana_rows == 0 and #card_rows == 0 then
     vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
     return
   end
   local entries = count.entries(lines, data.get)
   -- Mana symbols are counted locally, so they wait for the card data.
   local mana = data.ready() and mana_text(symbols.entries(entries, data.get))
+  local total, breakdown = M.cards(entries)
+  local cards = { { breakdown and total .. '  ' .. breakdown or total, 'LspInlayHint' } }
   local results = {}
 
   local function draw()
@@ -108,6 +145,9 @@ function M.refresh(buf)
       for _, row in ipairs(mana_rows) do
         mark(buf, row, mana)
       end
+    end
+    for _, row in ipairs(card_rows) do
+      mark(buf, row, cards)
     end
   end
 

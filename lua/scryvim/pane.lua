@@ -1,7 +1,8 @@
 --- Preview pane: a split on the right of the tab that follows the cursor in
 --- deck windows. A card line shows the card, spaced out more than hover since
 --- the pane has the room. A count line lists
---- the deck cards it counts, and a mana symbols line the cards with symbols.
+--- the deck cards it counts, a mana symbols line the cards with symbols, and
+--- a cards line every deck card.
 --- Below a nonland card are its odds of being cast on curve.
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
@@ -134,7 +135,8 @@ function M.content(lines, row, cb)
   local line = lines[row] or ''
   local query, label = tally.query(line)
   local mana = not query and tally.is_mana(line)
-  if not query and not mana then
+  local cards = not query and not mana and tally.is_cards(line)
+  if not query and not mana and not cards then
     local parsed = parse.parse(line)
     if parsed.kind ~= 'card' then
       return cb(nil)
@@ -161,6 +163,11 @@ function M.content(lines, row, cb)
     end, entries)
     local out = { '**Mana symbols**  ' .. symbols.format(symbols.entries(entries, data.get)), '' }
     return cb(vim.list_extend(out, card_list(with)))
+  end
+  if cards then
+    local total, breakdown = tally.cards(entries)
+    local out = { '**' .. total .. '**' .. (breakdown and '  ' .. breakdown or ''), '' }
+    return cb(vim.list_extend(out, card_list(entries)))
   end
   count.run(query, entries, function(err, result)
     if err then

@@ -72,8 +72,8 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
--- Live totals on `// count: <query>` and `// count mana symbols` lines,
--- and the preview pane with `pane.auto_open`.
+-- Live totals on `// count: <query>`, `// count mana symbols` and
+-- `// count cards` lines, and the preview pane with `pane.auto_open`.
 vim.api.nvim_create_autocmd('FileType', {
   group = group,
   pattern = 'deck',

@@ -13,6 +13,7 @@ local DECK = {
   '',
   'Sideboard',
   '3 Duress',
+  '// count cards',
 }
 
 describe('pane', function()
@@ -143,6 +144,16 @@ describe('pane', function()
       '4 Lightning Bolt  {R}',
       '2 Counterspell  {U}{U}',
     }, content(2))
+  end)
+
+  it('lists every deck card on a cards line', function()
+    assert.are.same({
+      '**26 cards**  20 lands  6 nonlands',
+      '',
+      '20 Mountain',
+      '4 Lightning Bolt  {R}',
+      '2 Counterspell  {U}{U}',
+    }, content(9))
   end)
 
   it('leaves the pane alone on other lines', function()
