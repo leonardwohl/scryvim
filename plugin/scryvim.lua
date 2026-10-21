@@ -66,9 +66,7 @@ vim.api.nvim_create_autocmd('FileType', {
     end
     local cfg = require('scryvim.config').get()
     require('scryvim.hover').fit(win, cfg.hover.max_width)
-    if cfg.colors then
-      require('scryvim.colors').highlight_buf(args.buf)
-    end
+    require('scryvim.colors').highlight_buf(args.buf, cfg.colors)
   end,
 })
 

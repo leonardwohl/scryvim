@@ -1,19 +1,18 @@
 --- fzf-lua adapter: multi-select with markdown preview.
 local colors = require('scryvim.colors')
+local icons = require('scryvim.icons')
 
 local M = {}
 
 function M.pick(items, opts)
   local fzf = require('fzf-lua')
-  local paint = opts.color and colors.ansi or function(s)
-    return s
-  end
+  local paint = opts.color and colors.ansi or icons.replace
   local lines, by_line = {}, {}
   for i, card in ipairs(items) do
     local text = opts.format_item(card)
     lines[i] = paint(text)
-    -- fzf strips the colors from what it returns; accept either form.
-    by_line[text], by_line[lines[i]] = card, card
+    -- fzf strips the colors from what it returns; accept any form.
+    by_line[text], by_line[lines[i]], by_line[icons.replace(text)] = card, card, card
   end
 
   fzf.fzf_exec(lines, {

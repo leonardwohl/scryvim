@@ -8,6 +8,7 @@ local config = require('scryvim.config')
 local count = require('scryvim.count')
 local curve = require('scryvim.curve')
 local data = require('scryvim.data')
+local icons = require('scryvim.icons')
 local symbols = require('scryvim.symbols')
 
 local M = {}
@@ -92,7 +93,7 @@ local function mana_text(totals)
   local color = config.get().colors
   return vim.tbl_map(function(chunk)
     local hl = chunk[2] and color and { 'LspInlayHint', colors.group(chunk[2]) } or 'LspInlayHint'
-    return { chunk[1], hl }
+    return { icons.replace(chunk[1]), hl }
   end, symbols.chunks(totals))
 end
 

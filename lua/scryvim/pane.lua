@@ -221,9 +221,7 @@ local function show(pane, text)
   vim.bo[pane.buf].modifiable = true
   vim.api.nvim_buf_set_lines(pane.buf, 0, -1, false, text)
   vim.bo[pane.buf].modifiable = false
-  if config.get().colors then
-    colors.highlight_buf(pane.buf)
-  end
+  colors.highlight_buf(pane.buf, config.get().colors)
   vim.api.nvim_win_set_cursor(pane.win, { 1, 0 })
 end
 

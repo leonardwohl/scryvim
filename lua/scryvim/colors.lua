@@ -1,5 +1,7 @@
 --- Mana symbol colors: finding `{…}` symbols in text, their highlight
 --- groups, and ANSI output for terminal previews.
+local icons = require('scryvim.icons')
+
 local M = {}
 
 M.COLORS = { 'white', 'blue', 'black', 'red', 'green', 'multicolor', 'colorless' }
@@ -42,17 +44,19 @@ function M.symbols(text)
 end
 
 --- Split text into `{ text, color }` chunks, one per `{…}` symbol. Text
---- between symbols (the ` // ` of split cards) has no color.
+--- between symbols (the ` // ` of split cards) has no color. With `icons`
+--- on, the symbols are icons.
 ---@param cost string
 ---@return { [1]: string, [2]: string|nil }[]
 function M.mana_chunks(cost)
   local chunks = {}
   local pos = 0
+  local pieces = icons.pieces(cost, icons.map())
   for _, sym in ipairs(M.symbols(cost)) do
     if sym[1] > pos then
       chunks[#chunks + 1] = { cost:sub(pos + 1, sym[1]) }
     end
-    chunks[#chunks + 1] = { cost:sub(sym[1] + 1, sym[2]), sym[3] }
+    chunks[#chunks + 1] = { icons.apply(cost, pieces, sym[1], sym[2]), sym[3] }
     pos = sym[2]
   end
   if pos < #cost then
@@ -77,10 +81,17 @@ end
 
 M.ns = vim.api.nvim_create_namespace('scryvim.colors')
 
---- Color every mana symbol in `buf`, replacing earlier highlights.
+--- Color every mana symbol in `buf`, replacing earlier highlights, and
+--- conceal them with icons when `icons` is on. `color` false leaves out the
+--- colors.
 ---@param buf integer
-function M.highlight_buf(buf)
+---@param color? boolean
+function M.highlight_buf(buf, color)
   vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
+  icons.conceal_buf(buf)
+  if color == false then
+    return
+  end
   for row, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
     for _, sym in ipairs(M.symbols(line)) do
       vim.api.nvim_buf_set_extmark(buf, M.ns, row - 1, sym[1], { end_col = sym[2], hl_group = M.group(sym[3]) })
@@ -110,15 +121,16 @@ function M.extmarks(text)
 end
 
 --- `text` with each mana symbol wrapped in a 24-bit ANSI color, for
---- previews that run in a terminal.
+--- previews that run in a terminal. With `icons` on, the symbols are icons.
 ---@param text string
 ---@return string
 function M.ansi(text)
   local out, pos = {}, 0
+  local pieces = icons.pieces(text, icons.map())
   for _, sym in ipairs(M.symbols(text)) do
     local fg = vim.api.nvim_get_hl(0, { name = M.group(sym[3]), link = false }).fg
     out[#out + 1] = text:sub(pos + 1, sym[1])
-    local s = text:sub(sym[1] + 1, sym[2])
+    local s = icons.apply(text, pieces, sym[1], sym[2])
     if fg then
       s = ('\27[38;2;%d;%d;%dm%s\27[39m'):format(math.floor(fg / 65536), math.floor(fg / 256) % 256, fg % 256, s)
     end
