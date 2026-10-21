@@ -3,7 +3,6 @@ local icons = require('scryvim.icons')
 
 describe('icons', function()
   local W, U, B, R, G = icons.DEFAULTS.W, icons.DEFAULTS.U, icons.DEFAULTS.B, icons.DEFAULTS.R, icons.DEFAULTS.G
-  local one, two = icons.DEFAULTS['1'], icons.DEFAULTS['2']
 
   after_each(function()
     vim.g.scryvim = nil
@@ -17,12 +16,19 @@ describe('icons', function()
 
   it('replaces mana symbols with icons, spaced from the text after them', function()
     vim.g.scryvim = { icons = true }
-    assert.are.equal(one .. ' ' .. R .. ' // ' .. U, icons.replace('{1}{R} // {U}'))
-    assert.are.equal(W .. '/' .. U .. ' ' .. B .. '/Φ ' .. two .. '/' .. G, icons.replace('{W/U} {B/P} {2/G}'))
+    assert.are.equal('1 ' .. R .. ' // ' .. U, icons.replace('{1}{R} // {U}'))
+    assert.are.equal(W .. '/' .. U .. ' ' .. B .. '/Φ 2/' .. G, icons.replace('{W/U} {B/P} {2/G}'))
     -- A hybrid symbol is spaced from the next one, but not inside.
     assert.are.equal(W .. '/' .. U .. ' ' .. R, icons.replace('{W/U}{R}'))
     -- Symbols with a part that has no icon stay as text.
-    assert.are.equal('{T}: Add ' .. G .. ' . {HR}{15}{foo}', icons.replace('{T}: Add {G}. {HR}{15}{foo}'))
+    assert.are.equal('{T}: Add ' .. G .. ' . {HR}{foo}', icons.replace('{T}: Add {G}. {HR}{foo}'))
+  end)
+
+  it('shows numbers and X as plain text', function()
+    vim.g.scryvim = { icons = true }
+    assert.are.equal('15 X ' .. R .. ' 0', icons.replace('{15}{X}{R}{0}'))
+    vim.g.scryvim = { icons = { ['1'] = 'c', X = false } }
+    assert.are.equal('c ' .. R .. ' {X}2', icons.replace('{1}{R}{X}{2}'))
   end)
 
   it('takes overrides, and false keeps a symbol as text', function()
@@ -52,9 +58,8 @@ describe('icons', function()
       { 1, 3, 4, U },
       { 1, 4, 5, ' ' },
       { 1, 5, 8, R },
-      { 2, 0, 1, one },
-      { 2, 1, 2, ' ' },
-      { 2, 2, 3, '' },
+      { 2, 0, 1, '' },
+      { 2, 2, 3, ' ' },
       { 2, 3, 6, R },
     }, marks)
     -- No colors with `color` false.
