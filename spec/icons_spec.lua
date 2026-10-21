@@ -18,7 +18,9 @@ describe('icons', function()
   it('replaces mana symbols with icons, spaced from the text after them', function()
     vim.g.scryvim = { icons = true }
     assert.are.equal(one .. ' ' .. R .. ' // ' .. U, icons.replace('{1}{R} // {U}'))
-    assert.are.equal(W .. ' /' .. U .. ' ' .. B .. ' /Φ ' .. two .. ' /' .. G, icons.replace('{W/U} {B/P} {2/G}'))
+    assert.are.equal(W .. '/' .. U .. ' ' .. B .. '/Φ ' .. two .. '/' .. G, icons.replace('{W/U} {B/P} {2/G}'))
+    -- A hybrid symbol is spaced from the next one, but not inside.
+    assert.are.equal(W .. '/' .. U .. ' ' .. R, icons.replace('{W/U}{R}'))
     -- Symbols with a part that has no icon stay as text.
     assert.are.equal('{T}: Add ' .. G .. ' . {HR}{15}{foo}', icons.replace('{T}: Add {G}. {HR}{15}{foo}'))
   end)
@@ -31,7 +33,7 @@ describe('icons', function()
   it('keeps each half of a hybrid symbol in its own color', function()
     vim.g.scryvim = { icons = true }
     assert.are.same(
-      { { W .. ' /', 'white' }, { U, 'blue' }, { ' ' }, { G .. ' /Φ', 'green' } },
+      { { W .. '/', 'white' }, { U, 'blue' }, { ' ' }, { G .. '/Φ', 'green' } },
       colors.mana_chunks('{W/U} {G/P}')
     )
   end)
@@ -39,16 +41,17 @@ describe('icons', function()
   it('conceals mana symbols in buffers', function()
     vim.g.scryvim = { icons = true }
     local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '4 Lightning Bolt  {R}', '{W/U}', '{1}{R}' })
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '4 Lightning Bolt  {R}', '{W/U}{R}', '{1}{R}' })
     colors.highlight_buf(buf, false)
     local marks = vim.tbl_map(function(m)
       return { m[2], m[3], m[4].end_col, m[4].conceal }
     end, vim.api.nvim_buf_get_extmarks(buf, icons.ns, 0, -1, { details = true }))
     assert.are.same({
       { 0, 18, 21, R },
-      { 1, 0, 1, W },
-      { 1, 1, 2, ' ' },
-      { 1, 3, 5, U },
+      { 1, 0, 2, W },
+      { 1, 3, 4, U },
+      { 1, 4, 5, ' ' },
+      { 1, 5, 8, R },
       { 2, 0, 1, one },
       { 2, 1, 2, ' ' },
       { 2, 2, 3, '' },
