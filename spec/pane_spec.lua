@@ -142,12 +142,12 @@ describe('pane', function()
     assert.are.same({ '**24 red**  produces:r', '', '20 Mountain', '4 Lightning Bolt  {R}' }, content(1))
   end)
 
-  it('lists the cards with mana symbols on a mana symbols line', function()
+  it('shows each mana type as a share of the symbols on a mana symbols line', function()
     assert.are.same({
       '**Mana symbols**  {U} 4  {R} 4',
       '',
-      '4 Lightning Bolt  {R}',
-      '2 Counterspell  {U}{U}',
+      '{U}   50%  ' .. ('█'):rep(10),
+      '{R}   50%  ' .. ('█'):rep(10),
     }, content(2))
   end)
 
