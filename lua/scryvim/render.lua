@@ -18,12 +18,10 @@ local function block(face)
   if nonempty(face.type_line) then
     out[#out + 1] = '*' .. face.type_line .. '*'
   end
-  out[#out + 1] = ''
-  out[#out + 1] = '---'
+  -- One line per ability, with no blank lines between: previews show the
+  -- markdown as written, so every blank line costs a row.
   if nonempty(face.oracle_text) then
-    out[#out + 1] = ''
-    -- Each ability is its own paragraph in markdown.
-    out[#out + 1] = (face.oracle_text:gsub('\n', '\n\n'))
+    out[#out + 1] = face.oracle_text
   end
   local stats
   if face.power or face.toughness then
@@ -34,13 +32,13 @@ local function block(face)
     stats = 'Defense: ' .. face.defense
   end
   if stats then
-    out[#out + 1] = ''
     out[#out + 1] = stats
   end
   return table.concat(out, '\n')
 end
 
---- Hover markdown. Multi-face cards get one block per face.
+--- Hover and preview markdown. Multi-face cards get one block per face,
+--- separated by a blank line.
 ---@param card table
 ---@return string
 function M.markdown(card)
@@ -52,11 +50,7 @@ function M.markdown(card)
   else
     blocks[1] = block(card)
   end
-  local md = table.concat(blocks, '\n\n---\n\n')
-  if card.scryfall_uri then
-    md = md .. '\n\n[Scryfall](' .. card.scryfall_uri .. ')'
-  end
-  return md
+  return table.concat(blocks, '\n\n')
 end
 
 --- `<mana_cost> · <type_line>`, omitting empty parts.
