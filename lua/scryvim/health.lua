@@ -44,6 +44,18 @@ function M.check()
     h.warn('last error: ' .. info.last_error)
   end
 
+  if cfg.pane.tags then
+    local tags = require('scryvim.tags').info()
+    if tags.fetched_at then
+      h.ok(('oracle tags present, fetched %.1f days ago'):format((os.time() - tags.fetched_at) / 86400))
+    else
+      h.info('no oracle tags yet; the preview pane downloads them for the first card it shows')
+    end
+    if tags.last_error then
+      h.warn('oracle tags: ' .. tags.last_error)
+    end
+  end
+
   local _, name = require('scryvim.picker').adapter(cfg.picker)
   h.info('picker adapter: ' .. name)
 end

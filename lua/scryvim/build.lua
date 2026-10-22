@@ -1,6 +1,7 @@
---- Bulk Oracle Cards file -> stripped cards.json.
+--- Bulk Oracle Cards file -> stripped cards.json, and Scryfall's oracle tag
+--- list -> tags.txt.
 ---
---- Runs as a child process: `nvim --clean -l build.lua <in> <out>`.
+--- Runs as a child process: `nvim --clean -l build.lua [--tags] <in> <out>`.
 --- Also required as a module for `strip()`. Must not require other scryvim
 --- modules, since the child runs with `--clean`.
 local M = {}
@@ -17,6 +18,7 @@ M.excluded_layouts = {
 
 local FIELDS = {
   'name',
+  'oracle_id',
   'mana_cost',
   'cmc',
   'type_line',
@@ -117,9 +119,66 @@ function M.run(input, output)
   return #cards
 end
 
+--- Oracle tag list (`{ data = { { label, oracle_ids }, ... } }`) -> a
+--- text file of oracle id per line, so a lookup is a plain string search
+--- rather than decoding the whole list. The first line is a JSON header
+--- with the labels, sorted; then `<oracle id>\t<label indices>` per card,
+--- indices ascending and comma-separated.
+---@param input string
+---@param output string
+---@return integer count cards with tags
+function M.tags(input, output)
+  local f = assert(io.open(input, 'rb'))
+  local obj = vim.json.decode(f:read('*a'), { luanil = { object = true, array = true } })
+  f:close()
+  local list = type(obj) == 'table' and obj.data
+  if type(list) ~= 'table' or #list == 0 then
+    error('no tags parsed from ' .. input)
+  end
+  local tags = {}
+  for _, tag in ipairs(list) do
+    if type(tag) == 'table' and type(tag.label) == 'string' and type(tag.oracle_ids) == 'table' then
+      tags[#tags + 1] = tag
+    end
+  end
+  table.sort(tags, function(a, b)
+    return a.label < b.label
+  end)
+  local labels, cards, ids = {}, {}, {}
+  for i, tag in ipairs(tags) do
+    labels[i] = tag.label
+    for _, id in ipairs(tag.oracle_ids) do
+      if type(id) == 'string' then
+        if not cards[id] then
+          cards[id] = {}
+          ids[#ids + 1] = id
+        end
+        local c = cards[id]
+        -- A tag that lists a card twice.
+        if c[#c] ~= i then
+          c[#c + 1] = i
+        end
+      end
+    end
+  end
+  local lines = { vim.json.encode({ labels = labels }) }
+  for _, id in ipairs(ids) do
+    lines[#lines + 1] = id .. '\t' .. table.concat(cards[id], ',')
+  end
+  local tmp = output .. '.tmp'
+  local out = assert(io.open(tmp, 'wb'))
+  out:write(table.concat(lines, '\n'), '\n')
+  out:close()
+  assert(os.rename(tmp, output))
+  return #ids
+end
+
 if (...) ~= 'scryvim.build' then
-  local input, output = _G.arg[1], _G.arg[2]
-  local ok, err = pcall(M.run, input, output)
+  local run, input, output = M.run, _G.arg[1], _G.arg[2]
+  if input == '--tags' then
+    run, input, output = M.tags, _G.arg[2], _G.arg[3]
+  end
+  local ok, err = pcall(run, input, output)
   if not ok then
     io.stderr:write(tostring(err) .. '\n')
     os.exit(1)

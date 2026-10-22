@@ -2,6 +2,7 @@ local count = require('scryvim.count')
 local helpers = require('helpers')
 local http = require('scryvim.http')
 local pane = require('scryvim.pane')
+local tags = require('scryvim.tags')
 local tally = require('scryvim.tally')
 
 local DECK = {
@@ -49,11 +50,13 @@ describe('pane', function()
 
   setup(function()
     helpers.block_network()
-    helpers.load_fixture()
+    local dir = helpers.load_fixture()
+    require('scryvim.build').tags(helpers.root .. '/spec/fixtures/oracle-tags.json', dir .. '/tags.txt')
   end)
 
   before_each(function()
     count._reset()
+    tags._reset()
     pane.MOVE_MS = 0
     tally.DEBOUNCE_MS = 10
     -- Scryfall stand-in: Mountain and Lightning Bolt match every query.
@@ -100,7 +103,48 @@ describe('pane', function()
       '100% to have the colors with 1 source',
       '',
       'Sources: {R} 20 of 20 lands',
+      '',
+      '---',
+      '',
+      'Oracle tags: burn, removal',
     }, content(3))
+  end)
+
+  it('says when a card has no oracle tags', function()
+    local out = content(5)
+    assert.are.same({ '---', '', '*No oracle tags*' }, vim.list_slice(out, #out - 2))
+  end)
+
+  it('shows the tags once the tag list arrives', function()
+    local cache_dir = vim.g.scryvim.cache_dir
+    local download = http.download
+    vim.g.scryvim = { cache_dir = vim.fn.tempname(), auto_download = true }
+    local finish
+    http.download = function(_, path, cb)
+      vim.fn.mkdir(vim.fs.dirname(path), 'p')
+      vim.uv.fs_copyfile(helpers.root .. '/spec/fixtures/oracle-tags.json', path)
+      finish = cb
+    end
+    vim.api.nvim_win_set_cursor(0, { 4, 0 })
+    pane.open()
+    local ok, err = pcall(function()
+      assert.are.equal('*Loading oracle tags…*', pane_lines()[#pane_lines()])
+      finish(nil)
+      vim.wait(10000, function()
+        return pane_lines()[#pane_lines()] == 'Oracle tags: counterspell'
+      end, 10)
+      assert.are.equal('Oracle tags: counterspell', pane_lines()[#pane_lines()])
+    end)
+    http.download = download
+    vim.g.scryvim = { cache_dir = cache_dir, auto_download = false }
+    assert(ok, err)
+  end)
+
+  it('leaves the tags out with pane.tags off', function()
+    vim.g.scryvim = vim.tbl_extend('force', vim.g.scryvim, { pane = { tags = false } })
+    local text = table.concat(content(3), '\n')
+    vim.g.scryvim = vim.tbl_extend('force', vim.g.scryvim, { pane = { tags = true } })
+    assert.is_nil(text:find('tags', 1, true))
   end)
 
   it('counts only the sources of the colors a card needs', function()
@@ -113,7 +157,7 @@ describe('pane', function()
       '0% to have the colors with 2 sources',
       '',
       'Sources: {U} 0 of 20 lands',
-    }, vim.list_slice(out, #out - 6))
+    }, vim.list_slice(out, #out - 10, #out - 4))
   end)
 
   it('gives each face with a cost its own odds', function()

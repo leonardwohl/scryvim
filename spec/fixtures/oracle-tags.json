@@ -1,0 +1,5 @@
+{"object":"list","has_more":false,"data":[
+{"object":"tag","id":"t1","label":"removal","type":"oracle","description":null,"oracle_ids":["10000000-0000-0000-0000-000000000001","10000000-0000-0000-0000-000000000008"]},
+{"object":"tag","id":"t2","label":"burn","type":"oracle","description":"Deals damage.","oracle_ids":["10000000-0000-0000-0000-000000000001","10000000-0000-0000-0000-000000000012","10000000-0000-0000-0000-000000000001"]},
+{"object":"tag","id":"t3","label":"counterspell","type":"oracle","description":null,"oracle_ids":["10000000-0000-0000-0000-000000000002"]}
+]}

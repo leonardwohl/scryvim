@@ -171,8 +171,9 @@ They also turn off with `counts = false`.
 
     - on a card line, the card, as |vim.lsp.buf.hover()| shows it but
       with more room: a rule under the type line and a blank line
-      between abilities, and below a nonland card its odds of being cast
-      on curve (|scryvim-on-curve|),
+      between abilities, below a nonland card its odds of being cast
+      on curve (|scryvim-on-curve|), and below that the card's Scryfall
+      oracle tags, the names `otag:` takes (|scryvim-tags|),
     - on a count line (|scryvim-count-lines|), the total and the cards it
       counts, most copies first,
     - on a `// count mana symbols` line, the totals and each type's share
@@ -208,7 +209,8 @@ They also turn off with `counts = false`.
     that search for lands, such as fetch lands, count as every color.
 
 :Scryvim update                                          *:Scryvim-update*
-    Download and rebuild the card data now.
+    Download and rebuild the card data now, and the oracle tags
+    (|scryvim-tags|) unless `pane.tags` is off.
 
 :Scryvim info                                              *:Scryvim-info*
     Show card count, Scryfall data timestamp and cache age.
@@ -256,7 +258,8 @@ wins. `setup()` is optional. Defaults: >lua
       picker        = 'buffer', -- see below
       search        = { max_pages = 3 },   -- 175 cards per page
       hover         = { max_width = 60 },  -- columns; 0 for no limit
-      pane          = { width = 50, auto_open = true, min_columns = 100 },
+      pane          = { width = 50, auto_open = true, min_columns = 100,
+                        tags = true },  -- see |scryvim-tags|
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <
@@ -293,6 +296,17 @@ the background, since they lack fields newer features need.
 When the cache is older than `max_age_days`, it is used immediately and
 refreshed in the background. A failed update leaves the existing cache in
 place; the error is shown in |:checkhealth|.
+
+                                                            *scryvim-tags*
+Card objects carry no tags, so for the oracle tags in |:Scryvim-pane| the
+first card the pane shows downloads Scryfall's oracle tag list (about
+23 MB) and builds `tags.txt` in `cache_dir`, in a child Neovim process. The
+pane says the tags are loading meanwhile and fills them in when they are
+ready. Like the card data, the list is refreshed in the background after
+`max_age_days`, and |:Scryvim-update| refreshes it too. Without
+`auto_download` it is only fetched by |:Scryvim-update|. A failed download
+is not retried until then; the pane and |:checkhealth| show the error. Set
+`pane.tags = false` to leave tags out and never download the list.
 
 ==============================================================================
 8. LUA API                                                       *scryvim-api*

@@ -3,7 +3,8 @@
 --- the pane has the room. A count line lists
 --- the deck cards it counts, a mana symbols line each type's share, and
 --- a cards line every deck card.
---- Below a nonland card are its odds of being cast on curve.
+--- Below a nonland card are its odds of being cast on curve, and below
+--- every card its oracle tags.
 local colors = require('scryvim.colors')
 local config = require('scryvim.config')
 local count = require('scryvim.count')
@@ -12,6 +13,7 @@ local data = require('scryvim.data')
 local parse = require('scryvim.parse')
 local render = require('scryvim.render')
 local symbols = require('scryvim.symbols')
+local tags = require('scryvim.tags')
 local tally = require('scryvim.tally')
 
 local M = {}
@@ -31,7 +33,7 @@ local auto = {} ---@type table<integer, table>
 -- Set while narrowing closes a pane, so it isn't taken as closed by hand.
 local hiding = false
 local group
-local unsubscribe
+local unsubscribe, unsubscribe_tags
 
 local function by_count(a, b)
   if a.count ~= b.count then
@@ -162,6 +164,26 @@ local function curve_lines(card, entries)
   return out
 end
 
+--- The oracle tags section for `card`. The tag list downloads on first use
+--- and the pane redraws when it arrives.
+local function tag_lines(card)
+  if not config.get().pane.tags or not card.oracle_id then
+    return {}
+  end
+  local labels, err = tags.get(card.oracle_id)
+  local line
+  if err then
+    line = '*Oracle tags: ' .. err .. '*'
+  elseif not labels then
+    line = '*Loading oracle tags…*'
+  elseif #labels == 0 then
+    line = '*No oracle tags*'
+  else
+    line = 'Oracle tags: ' .. table.concat(labels, ', ')
+  end
+  return { '', '---', '', line }
+end
+
 --- The pane text for line `row` (1-based) of `lines`, passed to `cb` as a
 --- list of lines; nil leaves the pane as it is. `cb` may run later, when a
 --- count needs Scryfall.
@@ -186,7 +208,8 @@ function M.content(lines, row, cb)
       return cb({ '*Unknown card: ' .. parsed.name .. '*' })
     end
     local out = vim.split(render.markdown(card, { spacious = true }), '\n', { plain = true })
-    return cb(vim.list_extend(out, curve_lines(card, count.entries(lines, data.get))))
+    vim.list_extend(out, curve_lines(card, count.entries(lines, data.get)))
+    return cb(vim.list_extend(out, tag_lines(card)))
   end
 
   local entries = count.entries(lines, data.get)
@@ -270,7 +293,8 @@ local function forget(tab)
   if next(panes) == nil then
     pcall(vim.api.nvim_del_augroup_by_id, group)
     unsubscribe()
-    group, unsubscribe = nil, nil
+    unsubscribe_tags()
+    group, unsubscribe, unsubscribe_tags = nil, nil, nil
   end
 end
 
@@ -311,12 +335,14 @@ local function setup_autocmds()
       end
     end,
   })
-  unsubscribe = data.on_ready(vim.schedule_wrap(function()
+  local function redraw()
     local tab = vim.api.nvim_get_current_tabpage()
     if panes[tab] then
       M.refresh()
     end
-  end))
+  end
+  unsubscribe = data.on_ready(vim.schedule_wrap(redraw))
+  unsubscribe_tags = tags.on_ready(vim.schedule_wrap(redraw))
 end
 
 --- Whether the current tab has a preview pane.

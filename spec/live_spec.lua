@@ -1,6 +1,6 @@
 -- Talks to the real Scryfall API. Opt in with SCRYVIM_LIVE=1.
 -- Makes a handful of rate-limited requests and downloads the Oracle Cards
--- bulk file once.
+-- bulk file and the oracle tag list once.
 local live = os.getenv('SCRYVIM_LIVE') == '1'
 local suite = live and describe or pending
 
@@ -43,7 +43,7 @@ suite('Scryfall (live)', function()
     end)
     assert.truthy(bolt, vim.inspect(cards))
     assert.are.same(
-      { 'cmc', 'mana_cost', 'name', 'oracle_text', 'scryfall_uri', 'type_line' },
+      { 'cmc', 'mana_cost', 'name', 'oracle_id', 'oracle_text', 'scryfall_uri', 'type_line' },
       vim.fn.sort(vim.tbl_keys(bolt))
     )
     assert.are.equal('{R}', bolt.mana_cost)
@@ -108,5 +108,18 @@ suite('Scryfall (live)', function()
     start = vim.uv.hrtime()
     assert(data.load_file(dir .. '/cards.json'))
     print(('cold load: %.0f ms'):format((vim.uv.hrtime() - start) / 1e6))
+  end)
+
+  it('downloads the oracle tag list and finds the tags of a card', function()
+    vim.g.scryvim = { cache_dir = vim.fn.tempname(), auto_download = false }
+    local tags = require('scryvim.tags')
+    tags._reset()
+    local err = await(function(cb)
+      tags.update(cb)
+    end, 600000)
+    assert.is_nil(err)
+    local bolt = require('scryvim.data').get('Lightning Bolt')
+    local labels = tags.get(bolt and bolt.oracle_id or '4457ed35-7c10-48c8-9776-456485fdf070')
+    assert.truthy(vim.tbl_contains(labels, 'removal'), vim.inspect(labels))
   end)
 end)
