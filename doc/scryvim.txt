@@ -343,13 +343,18 @@ The default colors come from your colorscheme, so they follow it when you
 switch. Each color is taken from the first of these the colorscheme sets,
 falling back to a built-in palette for 'background':
 
-    White         |hl-Normal| foreground
+    White         `g:terminal_color_11` (bright yellow), then
+                  `g:terminal_color_3` (yellow), then DiagnosticWarn
     Blue          `g:terminal_color_4`, then DiagnosticInfo
     Black         `g:terminal_color_5` (magenta)
     Red           `g:terminal_color_1`, then DiagnosticError
     Green         `g:terminal_color_2`, then DiagnosticOk
     Multicolor    `g:terminal_color_3` (yellow), then DiagnosticWarn
-    Colorless     `g:terminal_color_8` (bright black), then |hl-Comment|
+    Colorless     |hl-Normal| foreground
+
+White mana is yellow and colorless mana (generic, `{C}`, `{T}`) is the text
+color, since a pale white and a dim gray are hard to read, above all as
+|scryvim-icons|.
 
 The terminal colors (|terminal-config|) are the colorscheme's own red,
 green, blue and so on, which is why they come first. Override any group in
