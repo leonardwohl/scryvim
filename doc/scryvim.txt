@@ -172,8 +172,13 @@ They also turn off with `counts = false`.
 
     Other lines leave the pane as it is. After an edit the pane waits a
     second, like count lines. `:q` in the last other window closes the
-    pane too. Set its width with `pane.width`, and open it with every deck
-    with `pane.auto_open`.
+    pane too. Set its width with `pane.width`.
+
+    With `pane.auto_open`, on by default, the pane opens with every deck
+    when the editor is at least `pane.min_columns` wide (|'columns'|, 120
+    by default). When the editor narrows past that the pane closes, and
+    when it widens again the pane comes back, or opens beside a deck,
+    unless it was closed by hand. `:Scryvim pane` works at any width.
 
                                                         *scryvim-on-curve*
     On curve odds follow Frank Karsten's hypergeometric model: the chance
@@ -241,7 +246,7 @@ wins. `setup()` is optional. Defaults: >lua
       picker        = 'buffer', -- see below
       search        = { max_pages = 3 },   -- 175 cards per page
       hover         = { max_width = 60 },  -- columns; 0 for no limit
-      pane          = { width = 50, auto_open = false },  -- |:Scryvim-pane|
+      pane          = { width = 50, auto_open = true, min_columns = 120 },
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <

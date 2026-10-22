@@ -14,7 +14,7 @@ local function defaults()
     picker = 'buffer',
     search = { max_pages = 3 },
     hover = { max_width = 60 },
-    pane = { width = 50, auto_open = false },
+    pane = { width = 50, auto_open = true, min_columns = 120 },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end
@@ -58,6 +58,7 @@ local function validate(cfg)
   vim.validate('pane', cfg.pane, 'table')
   vim.validate('pane.width', cfg.pane.width, 'number')
   vim.validate('pane.auto_open', cfg.pane.auto_open, 'boolean')
+  vim.validate('pane.min_columns', cfg.pane.min_columns, 'number')
   vim.validate('cache_dir', cfg.cache_dir, 'string')
 end
 

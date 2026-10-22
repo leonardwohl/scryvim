@@ -84,9 +84,21 @@ vim.api.nvim_create_autocmd('FileType', {
       -- Once the deck is in its window, so the pane opens beside it.
       vim.schedule(function()
         if vim.api.nvim_get_current_buf() == args.buf then
-          require('scryvim.pane').open()
+          require('scryvim.pane').auto_open()
         end
       end)
+    end
+  end,
+})
+
+-- With `pane.auto_open`, close the pane when the editor gets narrower than
+-- `pane.min_columns` and bring it back when it widens. Only once a deck has
+-- loaded the pane module.
+vim.api.nvim_create_autocmd({ 'VimResized', 'TabEnter' }, {
+  group = group,
+  callback = function()
+    if package.loaded['scryvim.pane'] and require('scryvim.config').get().pane.auto_open then
+      require('scryvim.pane').fit()
     end
   end,
 })

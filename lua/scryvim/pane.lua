@@ -24,6 +24,12 @@ M.BAR_WIDTH = 20
 
 -- Tabpage -> { win, buf, timer, generation, tick }.
 local panes = {} ---@type table<integer, table>
+-- Tabpage -> { wide, hidden, dismissed }, for `pane.auto_open`: whether the
+-- editor was last wide enough for the pane, whether narrowing closed it, and
+-- whether it was closed by hand.
+local auto = {} ---@type table<integer, table>
+-- Set while narrowing closes a pane, so it isn't taken as closed by hand.
+local hiding = false
 local group
 local unsubscribe
 
@@ -281,6 +287,9 @@ local function setup_autocmds()
       for tab, pane in pairs(panes) do
         if pane.win == win then
           forget(tab)
+          if auto[tab] and not hiding then
+            auto[tab].dismissed = true
+          end
         end
       end
     end,
@@ -315,9 +324,12 @@ function M.is_open()
   return valid(panes[vim.api.nvim_get_current_tabpage()])
 end
 
---- Open the pane on the right of the current tab, keeping the cursor where
---- it is.
-function M.open()
+--- Whether the editor is wide enough to open the pane by itself.
+function M.wide()
+  return vim.o.columns >= config.get().pane.min_columns
+end
+
+local function open()
   if M.is_open() then
     return
   end
@@ -353,6 +365,56 @@ function M.open()
   end
   panes[tab] = { win = win, buf = buf, timer = assert(vim.uv.new_timer()), generation = 0 }
   M.refresh()
+end
+
+--- Open the pane on the right of the current tab, keeping the cursor where
+--- it is.
+function M.open()
+  local tab = vim.api.nvim_get_current_tabpage()
+  auto[tab] = { wide = M.wide() }
+  open()
+end
+
+--- For `pane.auto_open`, when a deck window opens: open the pane if the
+--- editor is wide enough. Otherwise |M.fit()| opens it once it widens.
+function M.auto_open()
+  if M.wide() then
+    M.open()
+  else
+    auto[vim.api.nvim_get_current_tabpage()] = { wide = false }
+  end
+end
+
+--- For `pane.auto_open`, after a resize or on entering a tab: when the
+--- editor narrows past `pane.min_columns`, close the pane, and when it
+--- widens again, reopen it, or open it beside a deck, unless it was closed
+--- by hand.
+function M.fit()
+  for tab in pairs(auto) do
+    if not vim.api.nvim_tabpage_is_valid(tab) then
+      auto[tab] = nil
+    end
+  end
+  local tab = vim.api.nvim_get_current_tabpage()
+  local state = auto[tab] or {}
+  auto[tab] = state
+  local wide = M.wide()
+  if state.wide == wide then
+    return
+  end
+  state.wide = wide
+  if not wide then
+    if M.is_open() then
+      hiding = true
+      pcall(vim.api.nvim_win_close, panes[tab].win, true)
+      hiding = false
+      forget(tab)
+      state.hidden = true
+    end
+  elseif state.hidden or (not state.dismissed and vim.bo.filetype == 'deck') then
+    state.hidden = false
+    open()
+  end
 end
 
 --- Close the pane in the current tab.

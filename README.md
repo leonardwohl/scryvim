@@ -75,7 +75,7 @@ vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 
 Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
 
-Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, and its odds of being cast on curve, a count line lists the cards it counts, a `// count mana symbols` line shows each mana type's share of the symbols, and a `// count cards` line lists every card in the deck. Set `pane = { auto_open = true }` to open it with every deck.
+Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, and its odds of being cast on curve, a count line lists the cards it counts, a `// count mana symbols` line shows each mana type's share of the symbols, and a `// count cards` line lists every card in the deck. It opens with every deck when the editor is at least `pane.min_columns` (120) columns wide, closes when the editor narrows past that and comes back when it widens again. Set `pane = { auto_open = false }` to only open it by hand.
 
 The on-curve odds follow Frank Karsten's hypergeometric model: the chance to have enough mana sources, in the right colors, on the turn equal to the card's mana value, on the play and on the draw, without mulligans. A dual land counts for either color but pays only one symbol. Sources are lands, plus mana creatures and rocks that cost less than the card; fetch lands count as every color.
 
@@ -107,7 +107,7 @@ Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
   picker        = 'buffer',    -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },
   hover         = { max_width = 60 },  -- 0 for no limit
-  pane          = { width = 50, auto_open = false },
+  pane          = { width = 50, auto_open = true, min_columns = 120 },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```
