@@ -35,7 +35,7 @@ local function block(face, spacious)
   end
   local stats
   if face.power or face.toughness then
-    stats = 'P/T: ' .. (face.power or '?') .. '/' .. (face.toughness or '?')
+    stats = (face.power or '?') .. '/' .. (face.toughness or '?')
   elseif face.loyalty then
     stats = 'Loyalty: ' .. face.loyalty
   elseif face.defense then
