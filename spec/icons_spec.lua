@@ -21,10 +21,12 @@ describe('icons', function()
     -- A hybrid symbol is spaced from the next one, but not inside.
     assert.are.equal(W .. '/' .. U .. ' ' .. R, icons.replace('{W/U}{R}'))
     -- Symbols with a part that has no icon stay as text.
-    assert.are.equal('{E}{HR}{foo}', icons.replace('{E}{HR}{foo}'))
+    assert.are.equal('{HR}{Y}{foo}', icons.replace('{HR}{Y}{foo}'))
     -- Tap and untap are arrows turning right and left.
-    local T, Q = icons.DEFAULTS.T, icons.DEFAULTS.Q
+    local T, Q, E = icons.DEFAULTS.T, icons.DEFAULTS.Q, icons.DEFAULTS.E
     assert.are.equal(T .. ' : Add ' .. G .. ' . ' .. Q, icons.replace('{T}: Add {G}. {Q}'))
+    -- Energy is a lightning bolt.
+    assert.are.equal('Get ' .. E .. ' ' .. E, icons.replace('Get {E}{E}'))
   end)
 
   it('shows numbers and X as plain text', function()

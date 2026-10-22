@@ -2,7 +2,7 @@
 ---
 --- Each part of a symbol between its slashes gets an icon: hybrid `{W/U}`
 --- shows as 󰖨/󰖌 and Phyrexian `{R/P}` as 󰈸/Φ. A symbol with a part that has
---- no icon (`{E}`, `{HR}`) stays as text. Numbers and `{X}` lose their
+--- no icon (`{HR}`, `{Y}`) stays as text. Numbers and `{X}` lose their
 --- braces: `{2}{R}` shows as `2 󰈸`.
 ---
 --- Nerd Font icons are drawn wider than the one cell Neovim gives them, so
@@ -29,8 +29,9 @@ M.DEFAULTS = {
   S = '\u{f0717}', -- nf-md-snowflake
   X = true,
   P = 'Φ',
-  T = '\u{f0468}', -- nf-md-rotate_right_variant
-  Q = '\u{f0466}', -- nf-md-rotate_left_variant
+  T = '\u{f17b8}', -- nf-md-arrow_u_right_top_bold
+  Q = '\u{f17b4}', -- nf-md-arrow_u_left_top_bold
+  E = '\u{f140b}', -- nf-md-lightning_bolt
 }
 
 M.ns = vim.api.nvim_create_namespace('scryvim.icons')
