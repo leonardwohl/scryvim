@@ -1,6 +1,7 @@
 # scryvim
 
 Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [Scryfall](https://scryfall.com) data.
+<img width="1335" height="942" alt="Screenshot 2026-10-21 at 22 16 52" src="https://github.com/user-attachments/assets/f2f27fda-7e93-4c69-a7fa-111408a38148" />
 
 - **Completion** of card names, through LSP, so it works with any completion engine.
 - **Mana costs** shown after each card, and **full card text** on hover (`K`).
@@ -11,6 +12,7 @@ Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [S
 - **Statusline** text with the deck's size and mana symbols, plus a lualine component.
 
 Card lookups use a local copy of Scryfall's card data, so nothing hits the network while you type. Only search and count lines ask Scryfall.
+<img width="1335" height="942" alt="Screenshot 2026-10-21 at 22 17 53" src="https://github.com/user-attachments/assets/01ae9260-5b62-4604-876f-5303836203a8" />
 
 ## Requirements
 
