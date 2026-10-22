@@ -61,12 +61,6 @@ function M.stats(buf)
   return stats
 end
 
--- Nerd Font icons for `{R}`, when `scryvim.icons` is there and `icons` on.
-local function icon_map()
-  local ok, icons = pcall(require, 'scryvim.icons')
-  return ok and icons.map() and icons or nil
-end
-
 --- `{ text, color }` chunks for the deck in `buf`, with the mana symbols'
 --- color names (`'red'`), or `{}` when it isn't a deck or has no cards.
 ---@param buf integer
@@ -92,13 +86,11 @@ function M.chunks(buf, opts)
     add({ render.plural(stats.lands, 'land') })
   end
   if opts.mana and stats.mana and next(stats.mana) then
-    local icons = icon_map()
-    for i, chunk in ipairs(symbols.chunks(stats.mana)) do
-      local text = icons and chunk[2] and icons.replace(chunk[1]) or chunk[1]
+    for i, chunk in ipairs(colors.mana_chunks(symbols.format(stats.mana))) do
       if i == 1 then
-        add({ text, chunk[2] })
+        add(chunk)
       else
-        out[#out + 1] = { text, chunk[2] }
+        out[#out + 1] = chunk
       end
     end
   end

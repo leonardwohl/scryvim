@@ -17,15 +17,6 @@ M.ns = vim.api.nvim_create_namespace('scryvim.mana')
 local attached = {} ---@type table<integer, table>
 local pending = {} ---@type table<integer, true>
 
-local function chunks(cost)
-  local out = {}
-  for _, chunk in ipairs(colors.mana_chunks(cost)) do
-    local hl = chunk[2] and { 'LspInlayHint', colors.group(chunk[2]) } or 'LspInlayHint'
-    out[#out + 1] = { chunk[1], hl }
-  end
-  return out
-end
-
 --- Redraw every mana cost in `buf`.
 ---@param buf integer
 function M.render(buf)
@@ -42,7 +33,7 @@ function M.render(buf)
     local cost = card and render.mana_cost(card)
     if cost then
       vim.api.nvim_buf_set_extmark(buf, M.ns, i - 1, 0, {
-        virt_text = chunks(cost),
+        virt_text = colors.virt_text(cost, 'LspInlayHint', true),
         virt_text_pos = 'eol',
         hl_mode = 'combine',
       })

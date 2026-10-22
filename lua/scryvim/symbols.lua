@@ -12,17 +12,6 @@ M.TYPES = { 'W', 'U', 'B', 'R', 'G', 'C', 'S' }
 
 local COUNTED = { W = true, U = true, B = true, R = true, G = true, C = true, S = true }
 
---- Color names from `scryvim.colors`, for highlighting.
-M.COLORS = {
-  W = 'white',
-  U = 'blue',
-  B = 'black',
-  R = 'red',
-  G = 'green',
-  C = 'colorless',
-  S = 'colorless',
-}
-
 local function add_symbol(sym, out, n)
   local parts = vim.split(sym:upper(), '/', { plain = true })
   if #parts > 1 and parts[#parts] == 'P' then
@@ -89,35 +78,18 @@ function M.entries(entries, lookup)
   return out
 end
 
---- `{ text, color }` chunks for totals: `{W} 3  {R} 12.5`. Types with no
---- symbols are left out.
+--- Totals as text: `{W} 3  {R} 12.5`. Types with no symbols are left out.
 ---@param totals table<string, number>
----@return { [1]: string, [2]: string|nil }[]
-function M.chunks(totals)
+---@return string
+function M.format(totals)
   local out = {}
   for _, t in ipairs(M.TYPES) do
     local v = totals[t]
     if v and v > 0 then
-      if #out > 0 then
-        out[#out + 1] = { '  ' }
-      end
-      out[#out + 1] = { '{' .. t .. '}', M.COLORS[t] }
-      out[#out + 1] = { (' %g'):format(v) }
+      out[#out + 1] = ('{%s} %g'):format(t, v)
     end
   end
-  if #out == 0 then
-    out[1] = { 'no mana symbols' }
-  end
-  return out
-end
-
---- Totals as plain text.
----@param totals table<string, number>
----@return string
-function M.format(totals)
-  return table.concat(vim.tbl_map(function(c)
-    return c[1]
-  end, M.chunks(totals)))
+  return #out > 0 and table.concat(out, '  ') or 'no mana symbols'
 end
 
 return M
