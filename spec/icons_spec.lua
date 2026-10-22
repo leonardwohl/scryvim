@@ -64,6 +64,16 @@ describe('icons', function()
     }, marks)
     -- No colors with `color` false.
     assert.are.same({}, vim.api.nvim_buf_get_extmarks(buf, colors.ns, 0, -1, {}))
+    -- With colors, each icon is drawn in its mana color.
+    colors.highlight_buf(buf)
+    local groups = vim.tbl_map(function(m)
+      return { m[2], m[3], m[4].hl_group }
+    end, vim.api.nvim_buf_get_extmarks(buf, icons.ns, 0, -1, { details = true }))
+    assert.are.same({
+      { 0, 18, 'ScryvimManaRed' },
+      { 1, 0, 'ScryvimManaWhite' },
+      { 1, 3, 'ScryvimManaBlue' },
+    }, vim.list_slice(groups, 1, 3))
     vim.api.nvim_buf_delete(buf, { force = true })
   end)
 end)

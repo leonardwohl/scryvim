@@ -101,7 +101,7 @@ M.ns = vim.api.nvim_create_namespace('scryvim.colors')
 ---@param color? boolean
 function M.highlight_buf(buf, color)
   vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
-  icons.conceal_buf(buf)
+  icons.conceal_buf(buf, 0, color ~= false)
   if color == false then
     return
   end

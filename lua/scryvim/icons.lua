@@ -118,20 +118,31 @@ function M.replace(text)
 end
 
 --- Conceal the mana symbols in `buf` with their icons, from row `first`
---- (0-based) on, replacing earlier ones there.
+--- (0-based) on, replacing earlier ones there. A concealed icon is drawn in
+--- its extmark's highlight, not the text's, so with `color` each one gets
+--- its mana color; without, it is drawn as |hl-Conceal|.
 ---@param buf integer
 ---@param first? integer
-function M.conceal_buf(buf, first)
+---@param color? boolean
+function M.conceal_buf(buf, first, color)
   first = first or 0
   vim.api.nvim_buf_clear_namespace(buf, M.ns, first, -1)
   local map = M.map()
   if not map then
     return
   end
+  local colors = color and require('scryvim.colors')
   for i, line in ipairs(vim.api.nvim_buf_get_lines(buf, first, -1, false)) do
     local row = first + i - 1
+    local syms = colors and colors.symbols(line) or {}
     local function conceal(s, e, char)
-      vim.api.nvim_buf_set_extmark(buf, M.ns, row, s, { end_col = e, conceal = char })
+      local hl
+      for _, sym in ipairs(syms) do
+        if s >= sym[1] and s < sym[2] then
+          hl = colors.group(sym[3])
+        end
+      end
+      vim.api.nvim_buf_set_extmark(buf, M.ns, row, s, { end_col = e, conceal = char, hl_group = hl })
     end
     for _, p in ipairs(M.pieces(line, map)) do
       if p[5] then
