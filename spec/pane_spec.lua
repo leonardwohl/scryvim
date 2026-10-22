@@ -222,7 +222,7 @@ describe('render.markdown spacious', function()
         '',
         'Two.',
         '',
-        'P/T: 1/1',
+        '1/1',
         '',
         '---',
         '',

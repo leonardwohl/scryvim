@@ -92,7 +92,8 @@ describe('lsp', function()
     local md = request('textDocument/hover', pos(6, 5)).contents.value
     assert.truthy(md:find('**Delver of Secrets**  {U}', 1, true))
     assert.truthy(md:find('**Insectile Aberration**', 1, true))
-    assert.truthy(md:find('P/T: 3/2', 1, true))
+    assert.truthy(md:find('\n3/2', 1, true))
+    assert.falsy(md:find('P/T', 1, true))
     md = request('textDocument/hover', pos(10, 5)).contents.value
     assert.truthy(md:find('Loyalty: 3', 1, true))
   end)

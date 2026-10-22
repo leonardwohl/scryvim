@@ -164,7 +164,7 @@ Lightning Bolt deals 3 damage to any target.
 ```
 
 - Multi-face: one block per face, separated by `---`.
-- Includes `P/T`, `Loyalty`, or `Defense` when present.
+- Includes power/toughness (bare, e.g. `2/3`), `Loyalty`, or `Defense` when present.
 - Unknown card or non-card line: `nil` result.
 
 ### Code action
