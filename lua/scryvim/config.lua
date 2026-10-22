@@ -14,7 +14,7 @@ local function defaults()
     picker = 'buffer',
     search = { max_pages = 3 },
     hover = { max_width = 60 },
-    pane = { width = 50, auto_open = true, min_columns = 120 },
+    pane = { width = 50, auto_open = true, min_columns = 100 },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end

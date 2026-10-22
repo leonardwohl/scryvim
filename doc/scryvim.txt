@@ -185,7 +185,7 @@ They also turn off with `counts = false`.
     pane too. Set its width with `pane.width`.
 
     With `pane.auto_open`, on by default, the pane opens with every deck
-    when the editor is at least `pane.min_columns` wide (|'columns'|, 120
+    when the editor is at least `pane.min_columns` wide (|'columns'|, 100
     by default). When the editor narrows past that the pane closes, and
     when it widens again the pane comes back, or opens beside a deck,
     unless it was closed by hand. `:Scryvim pane` works at any width.
@@ -256,7 +256,7 @@ wins. `setup()` is optional. Defaults: >lua
       picker        = 'buffer', -- see below
       search        = { max_pages = 3 },   -- 175 cards per page
       hover         = { max_width = 60 },  -- columns; 0 for no limit
-      pane          = { width = 50, auto_open = true, min_columns = 120 },
+      pane          = { width = 50, auto_open = true, min_columns = 100 },
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <

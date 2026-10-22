@@ -210,18 +210,18 @@ describe('pane', function()
     end
 
     it('opens only when the editor is at least min_columns wide', function()
-      vim.o.columns = 100
+      vim.o.columns = 99
       pane.auto_open()
       assert.is_false(pane.is_open())
-      vim.o.columns = 120
+      vim.o.columns = 100
       pane.auto_open()
       assert.is_true(pane.is_open())
     end)
 
     it('opens beside a deck once the editor widens', function()
-      vim.o.columns = 100
+      vim.o.columns = 80
       pane.auto_open()
-      resize(110)
+      resize(90)
       assert.is_false(pane.is_open())
       resize(160)
       assert.is_true(pane.is_open())
@@ -232,7 +232,7 @@ describe('pane', function()
       pane.auto_open()
       resize(140)
       assert.is_true(pane.is_open())
-      resize(100)
+      resize(80)
       assert.is_false(pane.is_open())
       assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(0))
       resize(160)
@@ -243,18 +243,18 @@ describe('pane', function()
       vim.o.columns = 160
       pane.auto_open()
       pane.close()
-      resize(100)
+      resize(80)
       resize(160)
       assert.is_false(pane.is_open())
     end)
 
     it('keeps a pane opened by hand on a narrow editor until it narrows again', function()
-      vim.o.columns = 100
+      vim.o.columns = 80
       pane.open()
-      resize(90)
+      resize(70)
       assert.is_true(pane.is_open())
       resize(160)
-      resize(100)
+      resize(80)
       assert.is_false(pane.is_open())
     end)
   end)
