@@ -3,6 +3,7 @@
 --- Takes the place of the server's inlay hints when `colors` is on: inlay
 --- hints are drawn in a single highlight group, so they cannot color each
 --- mana symbol.
+local attach = require('scryvim.attach')
 local colors = require('scryvim.colors')
 local data = require('scryvim.data')
 local parse = require('scryvim.parse')
@@ -11,11 +12,6 @@ local render = require('scryvim.render')
 local M = {}
 
 M.ns = vim.api.nvim_create_namespace('scryvim.mana')
-
--- Buffer -> { unsubscribe = fn }. Also identifies the attach, so a stale
--- buffer callback can tell it was replaced.
-local attached = {} ---@type table<integer, table>
-local pending = {} ---@type table<integer, true>
 
 --- Redraw every mana cost in `buf`.
 ---@param buf integer
@@ -41,63 +37,15 @@ function M.render(buf)
   end
 end
 
--- Coalesce bursts of edits into one redraw.
-local function schedule(buf)
-  if pending[buf] then
-    return
-  end
-  pending[buf] = true
-  vim.schedule(function()
-    pending[buf] = nil
-    if attached[buf] then
-      M.render(buf)
-    end
-  end)
-end
+local decor = attach.new(M.ns, {
+  edit_delay = 0,
+  render = function(buf)
+    M.render(buf)
+  end,
+})
 
----@param buf integer
-function M.attach(buf)
-  if attached[buf] then
-    return
-  end
-  local token = {}
-  attached[buf] = token
-  token.unsubscribe = data.on_ready(function()
-    schedule(buf)
-  end)
-  vim.api.nvim_buf_attach(buf, false, {
-    on_lines = function()
-      if attached[buf] ~= token then
-        return true
-      end
-      schedule(buf)
-    end,
-    on_reload = function()
-      schedule(buf)
-    end,
-    on_detach = function()
-      if attached[buf] == token then
-        M.detach(buf)
-      end
-    end,
-  })
-  schedule(buf)
-end
-
----@param buf integer
-function M.detach(buf)
-  local token = attached[buf]
-  if token then
-    token.unsubscribe()
-    attached[buf] = nil
-  end
-  if vim.api.nvim_buf_is_valid(buf) then
-    vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
-  end
-end
-
-function M.is_attached(buf)
-  return attached[buf] ~= nil
-end
+M.attach = decor.attach
+M.detach = decor.detach
+M.is_attached = decor.is_attached
 
 return M
