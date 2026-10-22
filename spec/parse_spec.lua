@@ -66,3 +66,52 @@ describe('parse', function()
     assert.are.same({ 2, 2 }, p.name_range)
   end)
 end)
+
+describe('parse count lines', function()
+  local function query(line)
+    local p = parse.parse(line)
+    return p.kind == 'comment' and p.count == 'query' and { p.query, p.label } or nil
+  end
+  local function is_count(line, what)
+    local p = parse.parse(line)
+    return p.kind == 'comment' and p.count == what
+  end
+
+  it('reads count comment lines', function()
+    assert.are.same({ 'otag:removal' }, query('// count: otag:removal'))
+    assert.are.same({ 'produces:r', 'red sources' }, query('  // Count red sources:  produces:r '))
+    assert.are.same({ 't:creature', 'creatures' }, query('# count creatures: t:creature'))
+    assert.are.same({ 't:land' }, query('// count  : t:land'))
+    assert.is_nil(query('// counterspells: t:instant'))
+    assert.is_nil(query('// count:'))
+    assert.is_nil(query('4 Count of Monte Cristo: the card'))
+    assert.are.equal('card', parse.parse('4 Count of Monte Cristo: the card').kind)
+  end)
+
+  it('reads mana symbol lines', function()
+    assert.is_true(is_count('// count mana symbols', 'mana'))
+    assert.is_true(is_count('  # Count  Mana Symbols  ', 'mana'))
+    assert.is_false(is_count('// count mana symbols: t:land', 'mana'))
+    assert.is_false(is_count('// mana symbols', 'mana'))
+    assert.is_nil(query('// count mana symbols'))
+  end)
+
+  it('reads card count lines', function()
+    assert.is_true(is_count('// count cards', 'cards'))
+    assert.is_true(is_count('  # Count  Cards  ', 'cards'))
+    assert.is_false(is_count('// count cards: t:land', 'cards'))
+    assert.are.same({ 't:land', 'cards' }, query('// count cards: t:land'))
+    assert.is_false(is_count('// cards', 'cards'))
+    assert.is_false(is_count('// count cards', 'mana'))
+    assert.is_nil(query('// count cards'))
+  end)
+
+  it('keeps count lines as comments', function()
+    assert.are.same({ kind = 'comment', count = 'mana' }, parse.parse('// count mana symbols'))
+    assert.are.same(
+      { kind = 'comment', count = 'query', query = 'produces:r', label = 'red sources' },
+      parse.parse('// count red sources: produces:r')
+    )
+    assert.are.same({ kind = 'comment' }, parse.parse('// burn'))
+  end)
+end)

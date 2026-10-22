@@ -3,6 +3,29 @@ local config = require('scryvim.config')
 
 local M = {}
 
+-- `nil` or 0 is the current buffer.
+local function buf(b)
+  return (b == nil or b == 0) and vim.api.nvim_get_current_buf() or b
+end
+
+-- The command's line range, or nothing without one.
+local function range(o)
+  if o.range > 0 then
+    return o.line1, o.line2
+  end
+end
+
+-- Start loading the card data; warn and return false when it isn't there.
+local function ready()
+  local data = require('scryvim.data')
+  data.ensure()
+  if not data.ready() then
+    vim.notify('scryvim: card data is not loaded yet', vim.log.levels.WARN)
+    return false
+  end
+  return true
+end
+
 --- Register the `deck` filetype for the configured extensions.
 function M.register_filetypes(cfg)
   local ext = {}
@@ -31,20 +54,18 @@ end
 ---@param first? integer
 ---@param last? integer
 function M.sort(bufnr, first, last)
-  bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+  bufnr = buf(bufnr)
   local data = require('scryvim.data')
   local sort = require('scryvim.sort')
-  data.ensure()
-  if not data.ready() then
-    vim.notify('scryvim: card data is not loaded yet', vim.log.levels.WARN)
+  if not ready() then
     return
   end
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   if not first then
     local row = vim.api.nvim_win_get_cursor(0)[1]
-    local query = require('scryvim.tally').query(lines[row])
-    if query then
-      return M.gather(bufnr, row, query, lines)
+    local parsed = require('scryvim.parse').parse(lines[row])
+    if parsed.count == 'query' then
+      return M.gather(bufnr, row, parsed.query, lines)
     end
     first, last = sort.block_at(lines, row)
     if not first then
@@ -119,7 +140,7 @@ function M.count(query, bufnr, first, last)
     vim.notify('scryvim: usage: :Scryvim count {query}', vim.log.levels.ERROR)
     return
   end
-  bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+  bufnr = buf(bufnr)
   local data = require('scryvim.data')
   local count = require('scryvim.count')
   data.ensure()
@@ -155,13 +176,11 @@ end
 ---@param first? integer
 ---@param last? integer
 function M.mana(bufnr, first, last)
-  bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+  bufnr = buf(bufnr)
   local data = require('scryvim.data')
   local count = require('scryvim.count')
   local symbols = require('scryvim.symbols')
-  data.ensure()
-  if not data.ready() then
-    vim.notify('scryvim: card data is not loaded yet', vim.log.levels.WARN)
+  if not ready() then
     return
   end
   local lines = vim.api.nvim_buf_get_lines(bufnr, first and first - 1 or 0, last or -1, false)
@@ -210,26 +229,13 @@ M.subcommands = {
     M.search(table.concat(vim.list_slice(o.fargs, 2), ' '))
   end,
   sort = function(o)
-    if o.range > 0 then
-      M.sort(0, o.line1, o.line2)
-    else
-      M.sort(0)
-    end
+    M.sort(0, range(o))
   end,
   count = function(o)
-    local query = table.concat(vim.list_slice(o.fargs, 2), ' ')
-    if o.range > 0 then
-      M.count(query, 0, o.line1, o.line2)
-    else
-      M.count(query, 0)
-    end
+    M.count(table.concat(vim.list_slice(o.fargs, 2), ' '), 0, range(o))
   end,
   mana = function(o)
-    if o.range > 0 then
-      M.mana(0, o.line1, o.line2)
-    else
-      M.mana(0)
-    end
+    M.mana(0, range(o))
   end,
   pane = function()
     M.pane()
