@@ -156,13 +156,13 @@ end
 
 local PALETTE = {
   dark = {
-    white = { '#f2e6b6', 229 },
+    white = { '#f0d264', 221 },
     blue = { '#5aa9e6', 75 },
     black = { '#b48ead', 139 },
     red = { '#e5604f', 167 },
     green = { '#6cbf6c', 71 },
     multicolor = { '#e0b440', 178 },
-    colorless = { '#a8a8a8', 248 },
+    colorless = { '#e4e4e4', 254 },
   },
   light = {
     white = { '#9a7d1e', 136 },
@@ -171,7 +171,7 @@ local PALETTE = {
     red = { '#b8322a', 124 },
     green = { '#2e7d32', 28 },
     multicolor = { '#a67c00', 136 },
-    colorless = { '#6e6e6e', 242 },
+    colorless = { '#303030', 236 },
   },
 }
 
@@ -180,14 +180,19 @@ local PALETTE = {
 -- color number), or a highlight group's foreground. Terminal colors come
 -- first: colorschemes set them to their own red, green, ..., while
 -- many leave the diagnostic groups at Neovim's defaults.
+--
+-- White is yellow and colorless is the text color, which read better than
+-- a pale white and a dim gray, above all as Nerd Font icons. White takes
+-- bright yellow, so it differs from the gold of multicolor where the
+-- colorscheme sets both.
 local SOURCES = {
-  white = { 'Normal' },
+  white = { 11, 3, 'DiagnosticWarn' },
   blue = { 4, 'DiagnosticInfo' },
   black = { 5 },
   red = { 1, 'DiagnosticError' },
   green = { 2, 'DiagnosticOk' },
   multicolor = { 3, 'DiagnosticWarn' },
-  colorless = { 8, 'Comment' },
+  colorless = { 'Normal' },
 }
 
 local function from_source(src)

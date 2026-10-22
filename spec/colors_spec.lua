@@ -136,7 +136,13 @@ describe('colors', function()
     -- The terminal slot still gives the cterm color.
     assert.are.same({ '#aa0000', 1 }, colors.theme_color('red'))
     assert.are.same({ '#550055', 5 }, colors.theme_color('black'))
-    assert.are.equal('#eeeeee', colors.theme_color('white')[1])
+    -- White is yellow, and colorless the text color.
+    vim.g.terminal_color_3 = '#cccc00'
+    assert.are.same({ '#cccc00', 11 }, colors.theme_color('white'))
+    vim.g.terminal_color_11 = '#ffff55'
+    assert.are.same({ '#ffff55', 11 }, colors.theme_color('white'))
+    vim.g.terminal_color_3, vim.g.terminal_color_11 = nil, nil
+    assert.are.equal('#eeeeee', colors.theme_color('colorless')[1])
     -- The terminal palette wins over the diagnostic groups.
     vim.g.terminal_color_1 = '#bb0000'
     assert.are.same({ '#bb0000', 1 }, colors.theme_color('red'))
