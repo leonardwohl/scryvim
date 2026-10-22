@@ -1,7 +1,7 @@
 --- Nerd Font icons for mana symbols, with `icons` on: `{R}` shows as 󰈸.
 ---
 --- Each part of a symbol between its slashes gets an icon: hybrid `{W/U}`
---- shows as 󰖨/󰖌 and Phyrexian `{R/P}` as 󰈸/Φ. A symbol with a part that has
+--- shows as 󰖙/󰖌 and Phyrexian `{R/P}` as 󰈸/Φ. A symbol with a part that has
 --- no icon (`{HR}`, `{Y}`) stays as text. Numbers and `{X}` lose their
 --- braces: `{2}{R}` shows as `2 󰈸`.
 ---
@@ -16,13 +16,13 @@ local config = require('scryvim.config')
 
 local M = {}
 
---- Material Design icons from Nerd Fonts 3. `true` shows the part as plain
+--- Nerd Fonts 3.2 icons, mostly Material Design. `true` shows the part as plain
 --- text without its braces, which every number (`{1}`, `{15}`) and `{X}` do
 --- by default: Nerd Font's circled numbers are drawn too small to read.
 M.DEFAULTS = {
-  W = '\u{f05a8}', -- nf-md-white_balance_sunny
+  W = '\u{f0599}', -- nf-md-weather_sunny
   U = '\u{f058c}', -- nf-md-water
-  B = '\u{f068c}', -- nf-md-skull
+  B = '\u{ee15}', -- nf-fa-skull
   R = '\u{f0238}', -- nf-md-fire
   G = '\u{f0531}', -- nf-md-tree
   C = '\u{f070c}', -- nf-md-rhombus_outline

@@ -18,7 +18,7 @@ Card lookups use a local copy of Scryfall's card data, so nothing hits the netwo
 
 - Neovim 0.11+
 - `curl` and `gzip`
-- Optional: a [Nerd Font](https://www.nerdfonts.com) (v3+), for mana symbol icons
+- Optional: a [Nerd Font](https://www.nerdfonts.com) (v3.2+), for mana symbol icons
 - Optional: [snacks.nvim](https://github.com/folke/snacks.nvim), [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or [fzf-lua](https://github.com/ibhagwan/fzf-lua), if you'd rather search with a fuzzy picker
 
 ## Installation
