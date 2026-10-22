@@ -380,13 +380,13 @@ colored.
 
                                                               *scryvim-icons*
 With `icons = true`, mana symbols show as Nerd Font icons
-(https://www.nerdfonts.com, version 3 or later) wherever scryvim shows them:
+(https://www.nerdfonts.com, version 3.2 or later) wherever scryvim shows them:
 mana costs after card lines, hover, the pane, count lines and search
-results. They are Material Design icons:
+results. They are mostly Material Design icons:
 
-    {W}  sun 󰖨          {C}  rhombus 󰜌
+    {W}  sun 󰖙          {C}  rhombus 󰜌
     {U}  water drop 󰖌   {S}  snowflake 󰜗
-    {B}  skull 󰚌        {P}  Φ
+    {B}  skull         {P}  Φ
     {R}  fire 󰈸
     {G}  tree 󰔱        {T}  tap 󱞬, {Q} untap 󱞨
                         {E}  energy 󱐋
@@ -396,7 +396,7 @@ Generic mana and `{X}` show as plain text without their braces: `{2}{R}` is
 the other icons; to use them anyway, override them (see below).
 
 Each part of a hybrid or Phyrexian symbol gets its icon, keeping the slash:
-`{W/U}` is 󰖨/󰖌 and `{R/P}` is 󰈸/Φ. Symbols with a part that has no icon,
+`{W/U}` is 󰖙/󰖌 and `{R/P}` is 󰈸/Φ. Symbols with a part that has no icon,
 such as `{HR}` or `{Y}`, stay as text. Colors apply to the icons as
 they do to the text.
 
