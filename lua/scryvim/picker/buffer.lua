@@ -250,7 +250,7 @@ function M.pick(items, opts)
         end
       end
     end
-    icons.conceal_buf(list_buf, first)
+    icons.conceal_buf(list_buf, first, opts.color)
     vim.api.nvim_win_set_config(list_win, { title = title(loading), title_pos = 'center' })
   end
 

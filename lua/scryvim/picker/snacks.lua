@@ -20,7 +20,7 @@ local function preview(ctx)
     local extmark = { end_col = mark.end_col, hl_group = mark.hl_group }
     vim.api.nvim_buf_set_extmark(ctx.buf, ns, mark.row - 1, mark.col, extmark)
   end
-  icons.conceal_buf(ctx.buf)
+  icons.conceal_buf(ctx.buf, 0, item.extmarks ~= nil)
   if ctx.win and vim.api.nvim_win_is_valid(ctx.win) then
     vim.wo[ctx.win].conceallevel = 2
   end
