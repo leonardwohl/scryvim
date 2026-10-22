@@ -192,6 +192,72 @@ describe('pane', function()
     pane.open()
     assert.is_true(pane.is_open())
   end)
+
+  describe('auto_open', function()
+    local columns
+
+    before_each(function()
+      columns = vim.o.columns
+    end)
+
+    after_each(function()
+      vim.o.columns = columns
+    end)
+
+    local function resize(n)
+      vim.o.columns = n
+      pane.fit()
+    end
+
+    it('opens only when the editor is at least min_columns wide', function()
+      vim.o.columns = 100
+      pane.auto_open()
+      assert.is_false(pane.is_open())
+      vim.o.columns = 120
+      pane.auto_open()
+      assert.is_true(pane.is_open())
+    end)
+
+    it('opens beside a deck once the editor widens', function()
+      vim.o.columns = 100
+      pane.auto_open()
+      resize(110)
+      assert.is_false(pane.is_open())
+      resize(160)
+      assert.is_true(pane.is_open())
+    end)
+
+    it('closes when the editor narrows and comes back when it widens', function()
+      vim.o.columns = 160
+      pane.auto_open()
+      resize(140)
+      assert.is_true(pane.is_open())
+      resize(100)
+      assert.is_false(pane.is_open())
+      assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(0))
+      resize(160)
+      assert.is_true(pane.is_open())
+    end)
+
+    it('stays closed after a resize once closed by hand', function()
+      vim.o.columns = 160
+      pane.auto_open()
+      pane.close()
+      resize(100)
+      resize(160)
+      assert.is_false(pane.is_open())
+    end)
+
+    it('keeps a pane opened by hand on a narrow editor until it narrows again', function()
+      vim.o.columns = 100
+      pane.open()
+      resize(90)
+      assert.is_true(pane.is_open())
+      resize(160)
+      resize(100)
+      assert.is_false(pane.is_open())
+    end)
+  end)
 end)
 
 describe('render.markdown spacious', function()
