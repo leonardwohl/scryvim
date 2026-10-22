@@ -63,7 +63,7 @@ describe('tally', function()
 
   it('shows totals by quantity on count lines', function()
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-      '// count red sources: produces:r',
+      '# red sources (produces:r)',
       '// just a comment',
       '20 Mountain',
       '4 Lightning Bolt',
