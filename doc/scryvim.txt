@@ -388,7 +388,8 @@ results. They are Material Design icons:
     {U}  water drop 󰖌   {S}  snowflake 󰜗
     {B}  skull 󰚌        {P}  Φ
     {R}  fire 󰈸
-    {G}  tree 󰔱        {T}  tap 󰑨, {Q} untap 󰑦
+    {G}  tree 󰔱        {T}  tap 󱞸, {Q} untap 󱞴
+                        {E}  energy 󱐋
 
 Generic mana and `{X}` show as plain text without their braces: `{2}{R}` is
 2 󰈸. Nerd Font's circled numbers are drawn too small to read next to
@@ -396,7 +397,7 @@ the other icons; to use them anyway, override them (see below).
 
 Each part of a hybrid or Phyrexian symbol gets its icon, keeping the slash:
 `{W/U}` is 󰖨/󰖌 and `{R/P}` is 󰈸/Φ. Symbols with a part that has no icon,
-such as `{E}` or `{HR}`, stay as text. Colors apply to the icons as
+such as `{HR}` or `{Y}`, stay as text. Colors apply to the icons as
 they do to the text.
 
 Nerd Font icons draw wider than the one cell Neovim gives them, so a symbol
