@@ -186,7 +186,7 @@ describe('sort on a count line', function()
   it('moves matching cards below the line into a block under it', function()
     local out = run({
       '1 Brainstorm',
-      '// count removal: t:instant',
+      '// removal (t:instant)',
       '4 Llanowar Elves',
       '2 Counterspell',
       '4 Lightning Bolt',
@@ -196,7 +196,7 @@ describe('sort on a count line', function()
     }, 2)
     assert.are.same({
       '1 Brainstorm',
-      '// count removal: t:instant',
+      '// removal (t:instant)',
       '4 Lightning Bolt',
       '2 Counterspell',
       '',

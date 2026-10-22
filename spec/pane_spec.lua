@@ -5,7 +5,7 @@ local pane = require('scryvim.pane')
 local tally = require('scryvim.tally')
 
 local DECK = {
-  '// count red: produces:r',
+  '# red (produces:r)',
   '// count mana symbols',
   '4 Lightning Bolt',
   '2 Counterspell',

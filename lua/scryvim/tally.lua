@@ -1,6 +1,7 @@
---- Saved counts in the deck file: `// count <label>: <query>` comment lines
---- show how many deck cards match their query, refreshed as the deck
---- changes. The optional label names the total: `40 red sources`.
+--- Saved counts in the deck file: `// <label> (<query>)` comment lines (or
+--- the older `// count <label>: <query>`) show how many deck cards match
+--- their query, refreshed as the deck changes. The optional label names the
+--- total: `40 red sources`.
 --- `// count mana symbols` lines show the deck's mana symbols by type, and
 --- `// count cards` lines the deck's size.
 local attach = require('scryvim.attach')

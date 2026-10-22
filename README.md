@@ -9,7 +9,7 @@ Neovim plugin for building Magic: The Gathering decks in plain-text decklists, b
 - Optionally, card names colored by card type (`type_colors = true`).
 - Optionally, [Nerd Font](https://www.nerdfonts.com) icons for mana symbols: `{R}` as 󰈸 (`icons = true`, `:h scryvim-icons`).
 - `:Scryvim sort` orders cards by mana value.
-- `:Scryvim count <query>` counts the deck's cards that match any Scryfall query, such as `otag:removal` or `produces:r`. Keep counts in the deck with `// count removal: otag:removal` lines, which show their totals live.
+- `:Scryvim count <query>` counts the deck's cards that match any Scryfall query, such as `otag:removal` or `produces:r`. Keep counts in the deck with `// Removal (otag:removal)` lines, which show their totals live.
 - `:Scryvim mana` and `// count mana symbols` lines count the colored, colorless and snow mana symbols in the deck's mana costs, to help work out how many sources each color needs.
 
 Lookups use a local copy of Scryfall's Oracle Cards bulk data, so nothing hits the network while you type.
@@ -45,11 +45,13 @@ SB: 2 Duress
 Comment lines like these show how many cards in the deck match, by quantity, and update as you edit:
 
 ```
-// count removal: otag:removal
-// count red sources: produces:r
+// Removal (otag:removal)
+// Red sources (produces:r)
 // count mana symbols
 // count cards
 ```
+
+A count line is a label followed by a Scryfall search in parentheses, so it reads like a section header. The search can hold parentheses of its own, such as `// Cheap spells ((t:instant or t:sorcery) mv<=2)`, and needs at least one keyword or operator (`:`, `=`, `<`, `>`, `!`), so an ordinary comment like `// cut these (too slow)` isn't counted. `#` works in place of `//`, and the older `// count removal: otag:removal` form still works.
 
 A `// count mana symbols` line shows the deck's mana symbols by type, such as `{W} 12  {R} 23.5  {C} 2`. Hybrid symbols count half for each half (`{R/G}` is 0.5 R and 0.5 G, `{2/R}` is 0.5 R), Phyrexian symbols count half (`{R/P}` is 0.5 R), and generic mana doesn't count. Cards with two mana costs, such as adventures, split and modal double-faced cards, count both.
 

@@ -93,10 +93,11 @@ Set codes and collector numbers are preserved but ignored for lookups.
     on its own: spells by mana value then name, then lands by name, then
     unknown cards in their original order.
 
-    On a `// count: {query}` line (see |scryvim-count-lines|), gathers the
-    cards below it that match {query} into a block directly under it,
-    sorted the same way. Cards above the line stay put, so a stack of count lines can
-    peel the deck into groups, top to bottom. A blank line separates the
+    On a count line such as `// Removal ({query})` (see
+    |scryvim-count-lines|), gathers the cards below it that match {query}
+    into a block directly under it, sorted the same way. Cards above the
+    line stay put, so a stack of count lines can peel the deck into
+    groups, top to bottom. A blank line separates the
     block from cards that were already under the line. A count line in the
     main deck takes main-deck cards only; one inside a Sideboard or
     Maybeboard section takes cards from that section.
@@ -114,16 +115,25 @@ Set codes and collector numbers are preserved but ignored for lookups.
 
                                                         *scryvim-count-lines*
 To keep counts in the deck, add comment lines of the form
-`// count <label>: <query>` (or `# count ...`). Each line shows its total
-at the end, named by the label (`40 red sources`), or `40 cards` without
-one. Totals are counted like |:Scryvim-count| without a range, and update
-a second after you stop typing. Query errors show on their line, including
+`// <label> (<query>)` (or `# <label> (<query>)`), which read like section
+headers. Each line shows its total at the end, named by the label
+(`40 Red sources`), or `40 cards` without one. Totals are counted like
+|:Scryvim-count| without a range, and update a second after you stop
+typing. Query errors show on their line, including
 terms Scryfall doesn't understand, such as a misspelled keyword, rather
 than counting as if the term weren't there. Example: >
-    // count removal: otag:removal       12 removal
-    // count red sources: produces:r     40 red sources
-    // count: t:creature                 18 cards
+    // Removal (otag:removal)            12 Removal
+    // Red sources (produces:r)          40 Red sources
+    // (t:creature)                      18 cards
 <
+The query is the parenthesized group that ends the line, so it can hold
+parentheses of its own: >
+    // Cheap spells ((t:instant or t:sorcery) mv<=2)
+<
+It needs at least one Scryfall keyword or operator (`:`, `=`, `<`, `>` or
+`!`), so a comment like `// cut these (too slow)` stays a plain comment.
+The older `// count <label>: <query>` form still works.
+
 Turn this off with `counts = false`.
 
 :[range]Scryvim mana                                       *:Scryvim-mana*

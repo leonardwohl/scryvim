@@ -58,12 +58,24 @@ local function trim(s)
 end
 
 --- A comment line, with `count` set for count lines: `'query'` (with
---- `query` and an optional `label`) for `// count <label>: <query>`,
---- `'mana'` for `// count mana symbols` and `'cards'` for `// count cards`.
+--- `query` and an optional `label`) for `// <label> (<query>)` or the older
+--- `// count <label>: <query>`, `'mana'` for `// count mana symbols` and
+--- `'cards'` for `// count cards`.
+---
+--- In the header form the query is the balanced parenthesized group that
+--- ends the line, so it can hold parentheses of its own. It needs a
+--- Scryfall operator (`:`, `=`, `<`, `>` or `!`), so a comment like
+--- `// cut these (too slow)` stays a plain comment.
 local function comment(rest)
   local label, q = nil, rest:match('^[Cc]ount:(.*)$')
   if not q then
     label, q = rest:match('^[Cc]ount%s([^:]*):(.*)$')
+  end
+  if not q then
+    local l, group = rest:match('^(.-)%s*(%b())%s*$')
+    if group and group:find('[:=<>!]') then
+      label, q = l, group:sub(2, -2)
+    end
   end
   q = q and trim(q)
   if q and q ~= '' then

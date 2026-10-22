@@ -88,6 +88,26 @@ describe('parse count lines', function()
     assert.are.equal('card', parse.parse('4 Count of Monte Cristo: the card').kind)
   end)
 
+  it('reads header-style count lines', function()
+    assert.are.same({ 'o:changeling', 'changelings' }, query('# changelings (o:changeling)'))
+    assert.are.same({ 'produces:r', 'Red sources' }, query('  // Red sources ( produces:r )  '))
+    assert.are.same({ 't:creature' }, query('# (t:creature)'))
+    assert.are.same(
+      { 'otag:removal (t:instant or t:sorcery)', 'Removal' },
+      query('# Removal (otag:removal (t:instant or t:sorcery))')
+    )
+    assert.are.same(
+      { '(t:instant or t:sorcery) cmc<=2', 'Cheap spells' },
+      query('# Cheap spells ((t:instant or t:sorcery) cmc<=2)')
+    )
+    assert.are.same({ 'o:draw', 'Card draw (cantrips too)' }, query('# Card draw (cantrips too) (o:draw)'))
+    assert.are.same({ '!"Lightning Bolt"', 'Bolts' }, query('# Bolts (!"Lightning Bolt")'))
+    assert.is_nil(query('# cut these (too slow)'))
+    assert.is_nil(query('# Ramp (t:land) for now'))
+    assert.is_nil(query('# Removal (otag:removal'))
+    assert.is_nil(query('# Removal ()'))
+  end)
+
   it('reads mana symbol lines', function()
     assert.is_true(is_count('// count mana symbols', 'mana'))
     assert.is_true(is_count('  # Count  Mana Symbols  ', 'mana'))
