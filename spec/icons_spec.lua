@@ -21,7 +21,10 @@ describe('icons', function()
     -- A hybrid symbol is spaced from the next one, but not inside.
     assert.are.equal(W .. '/' .. U .. ' ' .. R, icons.replace('{W/U}{R}'))
     -- Symbols with a part that has no icon stay as text.
-    assert.are.equal('{T}: Add ' .. G .. ' . {HR}{foo}', icons.replace('{T}: Add {G}. {HR}{foo}'))
+    assert.are.equal('{E}{HR}{foo}', icons.replace('{E}{HR}{foo}'))
+    -- Tap and untap are arrows turning right and left.
+    local T, Q = icons.DEFAULTS.T, icons.DEFAULTS.Q
+    assert.are.equal(T .. ' : Add ' .. G .. ' . ' .. Q, icons.replace('{T}: Add {G}. {Q}'))
   end)
 
   it('shows numbers and X as plain text', function()
