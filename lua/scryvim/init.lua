@@ -170,7 +170,7 @@ function M.mana(bufnr, first, last)
     vim.notify('scryvim: no cards to count', vim.log.levels.WARN)
     return
   end
-  vim.notify('Mana symbols: ' .. symbols.format(symbols.entries(entries, data.get)), vim.log.levels.INFO)
+  vim.notify('Mana symbols: ' .. symbols.format(count.stats(entries, data.get).mana), vim.log.levels.INFO)
 end
 
 --- Deck stats for 'statusline' and 'winbar': the deck's size and mana

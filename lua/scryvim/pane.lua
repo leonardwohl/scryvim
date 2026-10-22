@@ -188,7 +188,7 @@ function M.content(lines, row, cb)
     if not data.ready() then
       return cb({ '*scryvim: card data is not loaded yet*' })
     end
-    local totals = symbols.entries(entries, data.get)
+    local totals = count.stats(entries, data.get).mana
     return cb(vim.list_extend({ '**Mana symbols**  ' .. symbols.format(totals) }, mana_shares(totals)))
   end
   if cards then

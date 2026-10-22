@@ -52,6 +52,46 @@ describe('count.entries', function()
   end)
 end)
 
+describe('count.stats', function()
+  local STATS_CARDS = {
+    ['mountain'] = { name = 'Mountain', type_line = 'Basic Land — Mountain' },
+    ['lightning bolt'] = { name = 'Lightning Bolt', type_line = 'Instant', mana_cost = '{R}' },
+    ["emeria's call"] = {
+      name = "Emeria's Call // Emeria, Shattered Skyclave",
+      type_line = 'Sorcery // Land',
+      card_faces = {
+        { name = "Emeria's Call", type_line = 'Sorcery', mana_cost = '{4}{W}{W}{W}' },
+        { name = 'Emeria, Shattered Skyclave', type_line = 'Land', mana_cost = '' },
+      },
+    },
+  }
+  local entries = {
+    { name = 'Mountain', count = 20 },
+    { name = 'Lightning Bolt', count = 4 },
+    { name = "Emeria's Call", count = 1 },
+    { name = 'Mystery Card', count = 2 },
+  }
+
+  it('totals cards, lands and mana symbols with card data', function()
+    local stats = count.stats(entries, function(name)
+      return STATS_CARDS[name:lower()]
+    end)
+    assert.are.equal(27, stats.cards)
+    assert.are.equal(21, stats.lands)
+    assert.are.equal(4, stats.mana.R)
+    assert.is_true(stats.mana.W > 0)
+  end)
+
+  it('leaves lands and mana out without card data', function()
+    local stats = count.stats(entries, nil)
+    assert.are.same({ cards = 27 }, stats)
+  end)
+
+  it('counts an empty deck', function()
+    assert.are.same({ cards = 0, lands = 0, mana = {} }, count.stats({}, lookup))
+  end)
+end)
+
 describe('count.batches', function()
   it('keeps every query within the limit', function()
     local names = {}
