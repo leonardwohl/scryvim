@@ -74,6 +74,14 @@ describe('lsp', function()
     }, item.textEdit)
     -- Cursor inside the set suffix: no completion.
     assert.are.same({}, request('textDocument/completion', pos(1, 12)).items)
+    -- A count on its own is not a name yet.
+    for _, text in ipairs({ '1', '12', '4x', 'SB: 2' }) do
+      vim.api.nvim_buf_set_lines(buf, 1, 2, false, { text })
+      assert.are.same({}, request('textDocument/completion', pos(1, #text)).items, text)
+    end
+    -- Once the count is followed by a space, the name completes.
+    vim.api.nvim_buf_set_lines(buf, 1, 2, false, { '1 Lig' })
+    assert.are.equal('Lightning Bolt', request('textDocument/completion', pos(1, 5)).items[1].label)
     vim.api.nvim_buf_set_lines(buf, 1, 2, false, { LINES[2] })
   end)
 
