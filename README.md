@@ -1,36 +1,52 @@
 # scryvim
 
-Neovim plugin for building Magic: The Gathering decks in plain-text decklists, backed by [Scryfall](https://scryfall.com) data.
+Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [Scryfall](https://scryfall.com) data.
 
-- Card name completion through LSP, so it works with any completion engine.
-- `:Scryvim search <query>` shows a Scryfall search in a popup you browse like any buffer (`j`/`k`, `/`), and inserts the cards you mark with `<Tab>` and add with `<CR>`.
-- Mana costs as inlay hints; full card text on hover.
-- Mana symbols colored by color in mana costs, hover and picker previews, using your colorscheme's colors (`:h scryvim-colors`).
-- Optionally, card names colored by card type (`type_colors = true`).
-- Optionally, [Nerd Font](https://www.nerdfonts.com) icons for mana symbols: `{R}` as 󰈸 (`icons = true`, `:h scryvim-icons`).
-- `:Scryvim sort` orders cards by mana value.
-- `:Scryvim count <query>` counts the deck's cards that match any Scryfall query, such as `otag:removal` or `produces:r`. Keep counts in the deck with `// Removal (otag:removal)` lines, which show their totals live.
-- `:Scryvim mana` and `// count mana symbols` lines count the colored, colorless and snow mana symbols in the deck's mana costs, to help work out how many sources each color needs.
+- **Completion** of card names, through LSP, so it works with any completion engine.
+- **Mana costs** shown after each card, and **full card text** on hover (`K`).
+- **Search** Scryfall from a popup and insert the cards you pick.
+- **Live counts** in the deck: `// Removal (otag:removal)` shows `12 Removal` at its end.
+- **Sort** by mana value, with lands after spells.
+- **Preview pane** that follows the cursor and shows each card's odds of being cast on curve.
+- **Statusline** text with the deck's size and mana symbols, plus a lualine component.
 
-Lookups use a local copy of Scryfall's Oracle Cards bulk data, so nothing hits the network while you type.
+Card lookups use a local copy of Scryfall's card data, so nothing hits the network while you type. Only search and count lines ask Scryfall.
 
 ## Requirements
 
 - Neovim 0.11+
 - `curl` and `gzip`
-- Optional: [snacks.nvim](https://github.com/folke/snacks.nvim), [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or [fzf-lua](https://github.com/ibhagwan/fzf-lua), if you prefer a fuzzy picker for search results
+- Optional: a [Nerd Font](https://www.nerdfonts.com) (v3+), for mana symbol icons
+- Optional: [snacks.nvim](https://github.com/folke/snacks.nvim), [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) or [fzf-lua](https://github.com/ibhagwan/fzf-lua), if you'd rather search with a fuzzy picker
 
-## Install
+## Installation
 
-With lazy.nvim:
+[lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 { 'leonardwohl/scryvim' }
 ```
 
-No `setup()` call is needed. Open a `.dec` or `.deck` file (or `:set ft=deck`); card data downloads on first use.
+`vim.pack` (Neovim 0.12+):
+
+```lua
+vim.pack.add({ 'https://github.com/leonardwohl/scryvim' })
+```
+
+Or as a plain package:
+
+```sh
+git clone https://github.com/leonardwohl/scryvim ~/.local/share/nvim/site/pack/plugins/start/scryvim
+nvim -c 'helptags ALL' -c q
+```
+
+No `setup()` call is needed, and startup cost is tiny, so don't lazy-load it on `ft = 'deck'`: the plugin itself is what gives `.deck` files that filetype.
+
+Open a `.dec` or `.deck` file (or run `:set ft=deck` in any buffer). The first time, scryvim downloads Scryfall's card data, then refreshes it weekly in the background. Run `:checkhealth scryvim` if something seems off.
 
 ## Usage
+
+A decklist is one card per line, with optional sections and comments:
 
 ```
 Deck
@@ -38,36 +54,30 @@ Deck
 4x Counterspell (M10) 146
 20 Island
 
-Sideboard
-SB: 2 Duress
-```
-
-Comment lines like these show how many cards in the deck match, by quantity, and update as you edit:
-
-```
 // Removal (otag:removal)
 // Red sources (produces:r)
 // count mana symbols
 // count cards
+
+Sideboard
+SB: 2 Duress
 ```
 
-A count line is a label followed by a Scryfall search in parentheses, so it reads like a section header. The search can hold parentheses of its own, such as `// Cheap spells ((t:instant or t:sorcery) mv<=2)`, and needs at least one keyword or operator (`:`, `=`, `<`, `>`, `!`), so an ordinary comment like `// cut these (too slow)` isn't counted. `#` works in place of `//`, and the older `// count removal: otag:removal` form still works.
+### Commands
 
-A `// count mana symbols` line shows the deck's mana symbols by type, such as `{W} 12  {R} 23.5  {C} 2`. Hybrid symbols count half for each half (`{R/G}` is 0.5 R and 0.5 G, `{2/R}` is 0.5 R), Phyrexian symbols count half (`{R/P}` is 0.5 R), and generic mana doesn't count. Cards with two mana costs, such as adventures, split and modal double-faced cards, count both.
-
-A `// count cards` line shows the deck's size, split into lands and nonlands, such as `60 cards  24 lands  36 nonlands`. Like the other count lines, it leaves out the sideboard and maybeboard.
-
-| Command | |
+| Command | What it does |
 |---|---|
-| `:Scryvim search [query]` | Scryfall search → results popup → insert or increment |
-| `:[range]Scryvim sort` | Sort by mana value (block under cursor without a range; on a count line, gathers its matching cards under it) |
-| `:[range]Scryvim count <query>` | Count cards matching a Scryfall query, by quantity (whole deck minus sideboard without a range) |
-| `:[range]Scryvim mana` | Count mana symbols in mana costs by type, by quantity (whole deck minus sideboard without a range) |
-| `:Scryvim pane` | Toggle the preview pane on the right |
-| `:Scryvim update` | Refresh card data now |
+| `:Scryvim search [query]` | Search Scryfall and insert cards from the results |
+| `:[range]Scryvim sort` | Sort by mana value: the block under the cursor, or the range |
+| `:[range]Scryvim count <query>` | Count the cards matching a Scryfall query |
+| `:[range]Scryvim mana` | Count mana symbols in mana costs, by color |
+| `:Scryvim pane` | Toggle the preview pane |
+| `:Scryvim update` | Refresh the card data now |
 | `:Scryvim info` | Card count and cache age |
 
-No default keymaps. `<Plug>(scryvim-search)`, `<Plug>(scryvim-sort)` and `<Plug>(scryvim-pane)` are provided:
+Without a range, `count` and `mana` cover the whole deck except the sideboard and maybeboard.
+
+There are no default keymaps. Map the `<Plug>` ones if you like:
 
 ```lua
 vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
@@ -75,46 +85,79 @@ vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
 vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 ```
 
-Search results open in a popup that is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Set `picker = 'auto'` to use snacks.nvim, telescope.nvim or fzf-lua instead.
+### Search
 
-Decklists are tall and narrow, so `:Scryvim pane` opens a preview pane on the right that follows the cursor: a card line shows the card like hover does, with more room between abilities, and its odds of being cast on curve, a count line lists the cards it counts, a `// count mana symbols` line shows each mana type's share of the symbols, and a `// count cards` line lists every card in the deck. It opens with every deck when the editor is at least `pane.min_columns` (100) columns wide, closes when the editor narrows past that and comes back when it widens again. Set `pane = { auto_open = false }` to only open it by hand.
+The results popup is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Adding a card that's already in the deck bumps its count. Set `picker = 'auto'` to use your fuzzy picker instead.
 
-The on-curve odds follow Frank Karsten's hypergeometric model: the chance to have enough mana sources, in the right colors, on the turn equal to the card's mana value, on the play and on the draw, without mulligans. A dual land counts for either color but pays only one symbol. Sources are lands, plus mana creatures and rocks that cost less than the card; fetch lands count as every color.
+### Count lines
 
-The deck's size and mana symbols can also live in your statusline or winbar, without a count line in the deck. Add `%{%v:lua.require'scryvim'.statusline()%}` to `statusline` or `winbar`, or with lualine.nvim, the `scryvim` component:
+Comment lines that end in a Scryfall query in parentheses show a live total, so they read like section headers:
 
-```lua
-require('lualine').setup({ sections = { lualine_x = { 'scryvim', 'filetype' } } })
+```
+// Removal (otag:removal)                     12 Removal
+# Red sources (produces:r)                    40 Red sources
+// Cheap spells ((t:instant or t:sorcery) mv<=2)   9 Cheap spells
 ```
 
-It shows `60 cards  {W} 12  {R} 23.5` in deck buffers and nothing elsewhere. See `:h scryvim-statusline` for options.
+`//` and `#` both work. The query needs at least one Scryfall keyword or operator (`:`, `=`, `<`, `>`, `!`), so a comment like `// cut these (too slow)` stays a plain comment. Two special lines need no query:
 
-Hover (`K`), code actions (`gra`) and diagnostics come from the built-in LSP client.
+- `// count mana symbols` shows `{W} 12  {R} 23.5  {C} 2`. Hybrid symbols count half for each color, and Phyrexian symbols count half.
+- `// count cards` shows `60 cards  24 lands  36 nonlands`.
+
+Counts leave out the sideboard and maybeboard. With the cursor on a count line, `:Scryvim sort` gathers the cards it counts under it.
+
+### Preview pane
+
+Decklists are tall and narrow, so a pane on the right follows the cursor. On a card it shows the full card and its odds of being cast on curve, on the play and on the draw. On a count line it lists the cards counted, and on `// count mana symbols` each color's share.
+
+It opens on its own when the editor is at least 100 columns wide, and closes when it gets narrower. Set `pane = { auto_open = false }` to only open it with `:Scryvim pane`.
+
+The on-curve odds follow Frank Karsten's hypergeometric model, without mulligans. Sources are lands, plus mana creatures and rocks that cost less than the card. A dual land counts for either color but pays only one symbol, and fetch lands count as every color.
+
+### Statusline
+
+Show `60 cards  {W} 12  {R} 23.5` in deck windows, with no count line needed:
+
+```lua
+-- lualine.nvim
+require('lualine').setup({ sections = { lualine_x = { 'scryvim', 'filetype' } } })
+
+-- or any statusline / winbar
+vim.o.statusline = "%f %m%=%{%v:lua.require'scryvim'.statusline()%} %l:%c"
+```
+
+Options such as `{ 'scryvim', lands = true }` are in `:h scryvim-statusline`.
 
 ## Configuration
 
-Via `vim.g.scryvim` or `require('scryvim').setup(opts)`:
+Everything works without configuration. To change something, set `vim.g.scryvim` before the plugin loads, or call `require('scryvim').setup(opts)`. With lazy.nvim, `opts = { ... }` does the latter. The defaults:
 
 ```lua
 {
-  extensions    = { 'dec', 'deck' },
-  auto_download = true,
-  max_age_days  = 7,
-  inlay_hints   = true,
-  colors        = true,
-  type_colors   = false,
-  icons         = false,       -- true, or a table of overrides
-  diagnostics   = true,
-  counts        = true,
-  picker        = 'buffer',    -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
-  search        = { max_pages = 3 },
-  hover         = { max_width = 60 },  -- 0 for no limit
+  extensions    = { 'dec', 'deck' },  -- file extensions that get the deck filetype
+  auto_download = true,               -- download card data on first use
+  max_age_days  = 7,                  -- refresh card data in the background after this
+  inlay_hints   = true,               -- mana costs after card lines
+  colors        = true,               -- color mana symbols, from your colorscheme
+  type_colors   = false,              -- color card names by card type
+  icons         = false,              -- Nerd Font mana icons; true, or a table of overrides
+  diagnostics   = true,               -- flag unknown card names
+  counts        = true,               -- live totals on count lines
+  picker        = 'buffer',           -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
+  search        = { max_pages = 3 },  -- 175 cards per page
+  hover         = { max_width = 60 }, -- 0 for no limit
   pane          = { width = 50, auto_open = true, min_columns = 100 },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```
 
-See `:h scryvim` for details.
+For example, with lazy.nvim:
+
+```lua
+{ 'leonardwohl/scryvim', opts = { icons = true, type_colors = true } }
+```
+
+`:h scryvim` has the full reference, including the highlight groups (`:h scryvim-colors`) and icon overrides (`:h scryvim-icons`).
 
 ## Development
 
@@ -132,6 +175,8 @@ Two opt-in suites run in CI:
 - `SCRYVIM_TEST_PLUGINS=<dir>` drives the real snacks.nvim, telescope.nvim and fzf-lua pickers and the lualine.nvim component. `<dir>` holds checkouts of those four plus plenary.nvim, and `fzf` must be on `$PATH`.
 - `SCRYVIM_LIVE=1 busted spec/live_spec.lua` talks to the real Scryfall API and downloads the full Oracle Cards file once.
 
-## Disclaimer
+## License
+
+[MIT](LICENSE)
 
 scryvim is unofficial Fan Content. It is not produced by or endorsed by Scryfall or Wizards of the Coast. Card data is provided by Scryfall's API and bulk data.
