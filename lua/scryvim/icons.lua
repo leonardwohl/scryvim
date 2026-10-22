@@ -29,8 +29,8 @@ M.DEFAULTS = {
   S = '\u{f0717}', -- nf-md-snowflake
   X = true,
   P = 'Φ',
-  T = '\u{f17b8}', -- nf-md-arrow_u_right_top_bold
-  Q = '\u{f17b4}', -- nf-md-arrow_u_left_top_bold
+  T = '\u{f17ac}', -- nf-md-arrow_right_top_bold
+  Q = '\u{f17a8}', -- nf-md-arrow_left_top_bold
   E = '\u{f140b}', -- nf-md-lightning_bolt
 }
 
