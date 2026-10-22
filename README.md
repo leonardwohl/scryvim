@@ -14,6 +14,8 @@ Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [S
 Card lookups use a local copy of Scryfall's card data, so nothing hits the network while you type. Only search and count lines ask Scryfall.
 <img width="1335" height="942" alt="Screenshot 2026-10-21 at 22 17 53" src="https://github.com/user-attachments/assets/01ae9260-5b62-4604-876f-5303836203a8" />
 
+<sub>Shown: [LazyVim](https://www.lazyvim.org) in [Ghostty](https://ghostty.org), with [catppuccin](https://github.com/catppuccin/nvim) (mocha), [VictorMono Nerd Font](https://www.nerdfonts.com/font-downloads), and `vim.g.scryvim = { type_colors = true, icons = true }`.</sub>
+
 ## Requirements
 
 - Neovim 0.11+
@@ -67,15 +69,15 @@ SB: 2 Duress
 
 ### Commands
 
-| Command | What it does |
-|---|---|
-| `:Scryvim search [query]` | Search Scryfall and insert cards from the results |
-| `:[range]Scryvim sort` | Sort by mana value: the block under the cursor, or the range |
-| `:[range]Scryvim count <query>` | Count the cards matching a Scryfall query |
-| `:[range]Scryvim mana` | Count mana symbols in mana costs, by color |
-| `:Scryvim pane` | Toggle the preview pane |
-| `:Scryvim update` | Refresh the card data and oracle tags now |
-| `:Scryvim info` | Card count and cache age |
+| Command                         | What it does                                                 |
+| ------------------------------- | ------------------------------------------------------------ |
+| `:Scryvim search [query]`       | Search Scryfall and insert cards from the results            |
+| `:[range]Scryvim sort`          | Sort by mana value: the block under the cursor, or the range |
+| `:[range]Scryvim count <query>` | Count the cards matching a Scryfall query                    |
+| `:[range]Scryvim mana`          | Count mana symbols in mana costs, by color                   |
+| `:Scryvim pane`                 | Toggle the preview pane                                      |
+| `:Scryvim update`               | Refresh the card data and oracle tags now                    |
+| `:Scryvim info`                 | Card count and cache age                                     |
 
 Without a range, `count` and `mana` cover the whole deck except the sideboard and maybeboard.
 
