@@ -388,7 +388,7 @@ results. They are Material Design icons:
     {U}  water drop 󰖌   {S}  snowflake 󰜗
     {B}  skull 󰚌        {P}  Φ
     {R}  fire 󰈸
-    {G}  tree 󰔱        {T}  tap 󱞸, {Q} untap 󱞴
+    {G}  tree 󰔱        {T}  tap 󱞬, {Q} untap 󱞨
                         {E}  energy 󱐋
 
 Generic mana and `{X}` show as plain text without their braces: `{2}{R}` is
