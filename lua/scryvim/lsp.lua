@@ -201,9 +201,14 @@ function M.create(dispatchers)
     if not card or col < card.name_range[1] or (card.has_set and col > card.name_range[2]) then
       return empty
     end
+    local typed = line:sub(card.name_range[1] + 1, col)
+    -- A bare count ("1", "4x") with no space yet: still typing the count.
+    if not card.count_range and typed:match('^%d+[xX]?$') then
+      return empty
+    end
     local edit_range = range(params.position.line, card.name_range[1], math.max(card.name_range[2], col))
     local items = {}
-    for _, c in ipairs(data.complete(line:sub(card.name_range[1] + 1, col))) do
+    for _, c in ipairs(data.complete(typed)) do
       items[#items + 1] = {
         label = c.name,
         kind = vim.lsp.protocol.CompletionItemKind.Value,
