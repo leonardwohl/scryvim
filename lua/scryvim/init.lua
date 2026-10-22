@@ -205,9 +205,12 @@ function M.pane()
   require('scryvim.pane').toggle()
 end
 
---- Force a card data refresh.
+--- Force a card data refresh, and an oracle tags one.
 function M.update()
   require('scryvim.data').update({ force = true, announce = true })
+  if require('scryvim.config').get().pane.tags then
+    require('scryvim.tags').update()
+  end
 end
 
 function M.info()

@@ -8,7 +8,7 @@ Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [S
 - **Search** Scryfall from a popup and insert the cards you pick.
 - **Live counts** in the deck: `// Removal (otag:removal)` shows `12 Removal` at its end.
 - **Sort** by mana value, with lands after spells.
-- **Preview pane** that follows the cursor and shows each card's odds of being cast on curve.
+- **Preview pane** that follows the cursor and shows each card's odds of being cast on curve and its oracle tags.
 - **Statusline** text with the deck's size and mana symbols, plus a lualine component.
 
 Card lookups use a local copy of Scryfall's card data, so nothing hits the network while you type. Only search and count lines ask Scryfall.
@@ -74,7 +74,7 @@ SB: 2 Duress
 | `:[range]Scryvim count <query>` | Count the cards matching a Scryfall query |
 | `:[range]Scryvim mana` | Count mana symbols in mana costs, by color |
 | `:Scryvim pane` | Toggle the preview pane |
-| `:Scryvim update` | Refresh the card data now |
+| `:Scryvim update` | Refresh the card data and oracle tags now |
 | `:Scryvim info` | Card count and cache age |
 
 Without a range, `count` and `mana` cover the whole deck except the sideboard and maybeboard.
@@ -110,9 +110,11 @@ Counts leave out the sideboard and maybeboard. With the cursor on a count line, 
 
 ### Preview pane
 
-Decklists are tall and narrow, so a pane on the right follows the cursor. On a card it shows the full card and its odds of being cast on curve, on the play and on the draw. On a count line it lists the cards counted, and on `// count mana symbols` each color's share.
+Decklists are tall and narrow, so a pane on the right follows the cursor. On a card it shows the full card, its odds of being cast on curve, on the play and on the draw, and its Scryfall oracle tags (the `otag:` names, handy for writing count lines). On a count line it lists the cards counted, and on `// count mana symbols` each color's share.
 
 It opens on its own when the editor is at least 100 columns wide, and closes when it gets narrower. Set `pane = { auto_open = false }` to only open it with `:Scryvim pane`.
+
+Scryfall's card data has no tags, so the first card the pane shows downloads Scryfall's oracle tag list (about 23 MB, once a week like the card data). Set `pane = { tags = false }` to leave tags out and skip the download.
 
 The on-curve odds follow Frank Karsten's hypergeometric model, without mulligans. Sources are lands, plus mana creatures and rocks that cost less than the card. A dual land counts for either color but pays only one symbol, and fetch lands count as every color.
 
@@ -148,7 +150,7 @@ Everything works without configuration. To change something, set `vim.g.scryvim`
   picker        = 'buffer',           -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3 },  -- 175 cards per page
   hover         = { max_width = 60 }, -- 0 for no limit
-  pane          = { width = 50, auto_open = true, min_columns = 100 },
+  pane          = { width = 50, auto_open = true, min_columns = 100, tags = true },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```
