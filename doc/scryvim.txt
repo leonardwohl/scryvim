@@ -85,7 +85,10 @@ Set codes and collector numbers are preserved but ignored for lookups.
       q  <Esc>    close without adding
 
     Marks show in the sign column as `ScryvimPickMark` (linked to
-    |hl-Special|). Leaving the popup closes it. Set `picker` (see
+    |hl-Special|). Cards already in the deck start with how many copies
+    it lists (`4x`), counting every section and either name of a
+    multi-face card, highlighted as `ScryvimInDeck` (linked to
+    |hl-DiagnosticOk|). Fuzzy pickers show the same count. Leaving the popup closes it. Set `picker` (see
     |scryvim-config|) to use a fuzzy picker instead.
 
 :[range]Scryvim sort                                       *:Scryvim-sort*

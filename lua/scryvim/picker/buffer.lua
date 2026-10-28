@@ -12,6 +12,25 @@ M.streams = true
 local ns = vim.api.nvim_create_namespace('scryvim.results')
 
 vim.api.nvim_set_hl(0, 'ScryvimPickMark', { default = true, link = 'Special' })
+vim.api.nvim_set_hl(0, 'ScryvimInDeck', { default = true, link = 'DiagnosticOk' })
+
+--- Highlight the leading in-deck count (`4x`) of the result lines for
+--- `cards`, which start at 0-based row `first`.
+local function highlight_in_deck(buf, first, cards, in_deck)
+  if not in_deck then
+    return
+  end
+  for i, card in ipairs(cards) do
+    if in_deck(card) > 0 then
+      local row = first + i - 1
+      local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+      local s, e = line:match('^%s*()%d+x()')
+      if s then
+        vim.api.nvim_buf_set_extmark(buf, ns, row, s - 1, { end_col = e - 1, hl_group = 'ScryvimInDeck' })
+      end
+    end
+  end
+end
 
 --- Window configs for the list and preview: side by side when there is room,
 --- else the preview below the list. Sizes include the borders.
@@ -59,6 +78,7 @@ function M.pick(items, opts)
   local list_buf = scratch(lines)
   vim.bo[list_buf].filetype = 'scryvim_results'
   colors.highlight_buf(list_buf, opts.color)
+  highlight_in_deck(list_buf, 0, items, opts.in_deck)
   local preview_buf = scratch({})
 
   local marked = {} -- row -> extmark id
@@ -251,6 +271,7 @@ function M.pick(items, opts)
       end
     end
     icons.conceal_buf(list_buf, first, opts.color)
+    highlight_in_deck(list_buf, first, cards, opts.in_deck)
     vim.api.nvim_win_set_config(list_win, { title = title(loading), title_pos = 'center' })
   end
 
