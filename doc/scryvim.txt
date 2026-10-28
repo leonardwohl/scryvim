@@ -63,8 +63,9 @@ Set codes and collector numbers are preserved but ignored for lookups.
                                                                     *:Scryvim*
 :Scryvim search [query]                                  *:Scryvim-search*
     Search Scryfall (full Scryfall syntax) and show the results in a popup
-    (|scryvim-results|). Prompts for a query when none is given. Chosen
-    cards increment an existing line's count, or are inserted as
+    (|scryvim-results|). Prompts for a query when none is given; the prompt
+    starts with your last search this session so you can tweak it (<C-u>
+    clears it, see `search.prefill`). Chosen cards increment an existing line's count, or are inserted as
     `1 <name>` below the cursor.
 
                                                             *scryvim-results*
@@ -256,7 +257,8 @@ wins. `setup()` is optional. Defaults: >lua
       diagnostics   = true,
       counts        = true,     -- see |scryvim-count-lines|
       picker        = 'buffer', -- see below
-      search        = { max_pages = 3 },   -- 175 cards per page
+      search        = { max_pages = 3,     -- 175 cards per page
+                        prefill = true },  -- prompt starts with last search
       hover         = { max_width = 60 },  -- columns; 0 for no limit
       pane          = { width = 50, auto_open = true, min_columns = 100,
                         tags = true },  -- see |scryvim-tags|

@@ -260,6 +260,25 @@ describe('picker', function()
     end)
   end)
 
+  it('prefills the prompt with the last search', function()
+    local orig_input, orig_fetch = vim.ui.input, picker.fetch
+    local defaults = {}
+    vim.ui.input = function(opts)
+      defaults[#defaults + 1] = opts.default or false
+    end
+    picker.fetch = function() end
+    vim.g.scryvim = { picker = { pick = function() end } }
+    buffer({ '' })
+    picker.search()
+    picker.search('t:instant c:r')
+    picker.search()
+    vim.g.scryvim = { picker = { pick = function() end }, search = { prefill = false } }
+    picker.search()
+    vim.ui.input, picker.fetch = orig_input, orig_fetch
+    vim.g.scryvim = nil
+    assert.are.same({ false, 't:instant c:r', false }, defaults)
+  end)
+
   it('resolves auto in order snacks, telescope, fzf-lua, then vim.ui.select', function()
     local orig = picker._available
     local installed = {}
