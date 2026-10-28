@@ -150,7 +150,7 @@ Everything works without configuration. To change something, set `vim.g.scryvim`
   diagnostics   = true,               -- flag unknown card names
   counts        = true,               -- live totals on count lines
   picker        = 'buffer',           -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
-  search        = { max_pages = 3 },  -- 175 cards per page
+  search        = { max_pages = 3, prefill = true }, -- 175 cards per page; prompt starts with your last search
   hover         = { max_width = 60 }, -- 0 for no limit
   pane          = { width = 50, auto_open = true, min_columns = 100, tags = true },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',

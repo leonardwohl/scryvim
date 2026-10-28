@@ -45,8 +45,12 @@ M.CACHE_SIZE = 20
 M.CACHE_TTL_MS = 30 * 60 * 1000
 local cache, cache_order = {}, {}
 
+-- The last query searched this session, offered again by the prompt.
+local last_query = nil ---@type string|nil
+
 function M._clear_cache()
   cache, cache_order = {}, {}
+  last_query = nil
 end
 
 local function cache_get(key)
@@ -217,17 +221,19 @@ end
 --- `:Scryvim search [query]`.
 ---@param query? string
 function M.search(query)
+  local cfg = config.get()
   if not query or query == '' then
-    vim.ui.input({ prompt = 'Scryfall search: ' }, function(input)
+    local default = cfg.search.prefill and last_query or nil
+    vim.ui.input({ prompt = 'Scryfall search: ', default = default }, function(input)
       if input and input ~= '' then
         M.search(input)
       end
     end)
     return
   end
+  last_query = query
   local bufnr = vim.api.nvim_get_current_buf()
   local row = vim.api.nvim_win_get_cursor(0)[1]
-  local cfg = config.get()
   vim.notify('scryvim: searching Scryfall for ' .. query .. '…', vim.log.levels.INFO)
   local adapter = M.adapter(cfg.picker)
   local pick_opts = {
