@@ -67,6 +67,64 @@ describe('picker', function()
     assert.are.same({ '2 Delver of Secrets' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
   end)
 
+  it('counts the deck, matching multi-face cards by either name', function()
+    local buf = buffer({
+      'Deck',
+      '2 Lightning Bolt',
+      '1x Delver of Secrets',
+      '',
+      'Sideboard',
+      'SB: 1 lightning bolt (2X2) 117',
+      '1 Fire // Ice',
+    })
+    local counts = picker.deck_counts(buf)
+    assert.are.equal(3, picker.in_deck(counts, card('Lightning Bolt')))
+    assert.are.equal(0, picker.in_deck(counts, card('Shock')))
+    local delver = {
+      name = 'Delver of Secrets // Insectile Aberration',
+      card_faces = { { name = 'Delver of Secrets' }, { name = 'Insectile Aberration' } },
+    }
+    assert.are.equal(1, picker.in_deck(counts, delver))
+    local fire = { name = 'Fire // Ice', card_faces = { { name = 'Fire' }, { name = 'Ice' } } }
+    assert.are.equal(1, picker.in_deck(counts, fire))
+  end)
+
+  it('starts result lines with the deck count when the deck has cards', function()
+    local plain = picker.format_item(card('Shock'))
+    local function in_deck(c)
+      return c.name == 'Lightning Bolt' and 4 or 0
+    end
+    local bolt = picker.format_item(card('Lightning Bolt'))
+    assert.are.equal(' 4x ' .. bolt, picker.format_item(card('Lightning Bolt'), in_deck))
+    assert.are.equal('    ' .. plain, picker.format_item(card('Shock'), in_deck))
+
+    local orig = picker.fetch
+    picker.fetch = function(_, _, cb)
+      cb(nil, { card('Lightning Bolt'), card('Shock') })
+    end
+    local lines = {}
+    vim.g.scryvim = {
+      picker = {
+        pick = function(items, opts)
+          for i, c in ipairs(items) do
+            lines[i] = opts.format_item(c)
+          end
+        end,
+      },
+    }
+    local notify = vim.notify
+    vim.notify = function() end
+    buffer({ '// Burn', '2 Lightning Bolt' })
+    picker.search('t:instant')
+    assert.are.same({ ' 2x ' .. bolt, '    ' .. plain }, lines)
+    buffer({ '// nothing yet' })
+    picker.search('t:instant')
+    assert.are.same({ bolt, plain }, lines)
+    vim.notify = notify
+    picker.fetch = orig
+    vim.g.scryvim = nil
+  end)
+
   it('runs search -> adapter -> insert', function()
     local http = require('scryvim.http')
     local urls = {}

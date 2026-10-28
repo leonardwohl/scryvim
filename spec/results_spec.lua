@@ -177,6 +177,32 @@ describe('results popup', function()
     ui.append({ ITEMS[1] }, false)
   end)
 
+  it('highlights the deck count of cards already in the deck', function()
+    local function in_deck(card)
+      return card.name == 'Counterspell' and 2 or 0
+    end
+    local ui = results.pick({ ITEMS[1] }, {
+      prompt = 'Scryfall: test',
+      in_deck = in_deck,
+      format_item = function(card)
+        local n = in_deck(card)
+        return ('%3s %s'):format(n > 0 and n .. 'x' or '', card.name)
+      end,
+      preview = function(card)
+        return card.name
+      end,
+      on_choose = function() end,
+    })
+    ui.append({ ITEMS[2], ITEMS[3] }, false)
+    local ns = vim.api.nvim_get_namespaces()['scryvim.results']
+    local marks = vim.api.nvim_buf_get_extmarks(ui.list_buf, ns, 0, -1, { details = true })
+    assert.are.equal(1, #marks)
+    assert.are.equal(1, marks[1][2])
+    assert.are.equal(1, marks[1][3])
+    assert.are.equal(3, marks[1][4].end_col)
+    assert.are.equal('ScryvimInDeck', marks[1][4].hl_group)
+  end)
+
   it('stacks the preview below the list on narrow screens', function()
     vim.o.columns = 100
     local list, preview = results.layout()

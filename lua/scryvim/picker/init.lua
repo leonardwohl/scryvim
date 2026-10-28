@@ -149,14 +149,58 @@ function M.fetch(query, max_pages, cb, on_page)
   end)
 end
 
-function M.format_item(card)
-  return ('%-40s %-20s %s'):format(card.name, render.mana_cost(card) or '', card.type_line or '')
+local function front_face(card)
+  local face = card.card_faces and card.card_faces[1]
+  return face and face.name
 end
 
 local function same_card(line_name, card)
   local n = line_name:lower()
-  local face = card.card_faces and card.card_faces[1]
-  return n == card.name:lower() or (face ~= nil and face.name ~= nil and n == face.name:lower())
+  local face = front_face(card)
+  return n == card.name:lower() or (face ~= nil and n == face:lower())
+end
+
+--- How many copies of each card the buffer lists, across all sections,
+--- keyed by lowercased name as written.
+---@param bufnr integer
+---@return table<string, integer>
+function M.deck_counts(bufnr)
+  local counts = {}
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
+    local p = parse.parse(line)
+    if p.kind == 'card' then
+      local key = p.name:lower()
+      counts[key] = (counts[key] or 0) + p.count
+    end
+  end
+  return counts
+end
+
+--- How many copies of `card` `counts` holds. A multi-face card can be listed
+--- by its full name or its front face.
+---@param counts table<string, integer>
+---@param card table
+---@return integer
+function M.in_deck(counts, card)
+  local n = counts[card.name:lower()] or 0
+  local face = front_face(card)
+  if face and face:lower() ~= card.name:lower() then
+    n = n + (counts[face:lower()] or 0)
+  end
+  return n
+end
+
+--- One result line. With `in_deck`, the line starts with a column holding
+--- the deck's count of the card (`4x`), blank for cards not in the deck.
+---@param card table
+---@param in_deck? fun(card: table): integer
+function M.format_item(card, in_deck)
+  local line = ('%-40s %-20s %s'):format(card.name, render.mana_cost(card) or '', card.type_line or '')
+  if not in_deck then
+    return line
+  end
+  local n = in_deck(card)
+  return ('%3s %s'):format(n > 0 and n .. 'x' or '', line)
 end
 
 --- Add `cards` to the buffer: increment an existing line's count, or insert
@@ -230,10 +274,18 @@ function M.search(query)
   local cfg = config.get()
   vim.notify('scryvim: searching Scryfall for ' .. query .. '…', vim.log.levels.INFO)
   local adapter = M.adapter(cfg.picker)
+  -- Mark results already in the deck. Counted once, as the search starts.
+  local counts = M.deck_counts(bufnr)
+  local in_deck = next(counts) and function(card)
+    return M.in_deck(counts, card)
+  end or nil
   local pick_opts = {
     prompt = 'Scryfall: ' .. query,
     color = cfg.colors,
-    format_item = M.format_item,
+    in_deck = in_deck,
+    format_item = function(card)
+      return M.format_item(card, in_deck)
+    end,
     preview = render.markdown,
     on_choose = function(chosen)
       if vim.api.nvim_buf_is_valid(bufnr) and #chosen > 0 then

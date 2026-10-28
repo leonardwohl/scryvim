@@ -91,7 +91,7 @@ vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 
 ### Search
 
-The results popup is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Adding a card that's already in the deck bumps its count. Set `picker = 'auto'` to use your fuzzy picker instead.
+The results popup is a normal buffer: move with `j`/`k` or any motion, search with `/`, mark cards with `<Tab>` (or a visual selection), add them with `<CR>`, close with `q`. Cards already in the deck show how many copies it has (`4x`), and adding one bumps its count. Set `picker = 'auto'` to use your fuzzy picker instead.
 
 ### Count lines
 
