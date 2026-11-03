@@ -48,9 +48,20 @@ local cache, cache_order = {}, {}
 -- The last query searched this session, offered again by the prompt.
 local last_query = nil ---@type string|nil
 
+-- The newest search. A search's results only reach the screen while it is
+-- `active`: starting another one drops the old one's results, so a slow
+-- reply can't open a stale picker over the new search.
+local active = nil ---@type table|nil
+
+-- Whether the search prompt is open. Results that arrive meanwhile wait
+-- until it closes, so a picker never opens on top of (and strands) the
+-- prompt: submitting a new query drops them, cancelling shows them.
+local prompting = false
+
 function M._clear_cache()
   cache, cache_order = {}, {}
   last_query = nil
+  active, prompting = nil, false
 end
 
 local function cache_get(key)
@@ -262,20 +273,67 @@ function M.insert(bufnr, row, cards)
   vim.api.nvim_buf_set_lines(bufnr, first - 1, old_last, false, vim.list_slice(lines, first, new_last))
 end
 
+--- Run `fn` for search `s`: now, after the prompt closes, or never if a newer
+--- search replaced `s`.
+local function deliver(s, fn)
+  if s ~= active then
+    return
+  end
+  if prompting then
+    s.held[#s.held + 1] = fn
+  else
+    fn()
+  end
+end
+
+--- Run what the active search held back while the prompt was open.
+local function release()
+  local s = active
+  if not s or #s.held == 0 then
+    return
+  end
+  -- After the prompt's own window has gone.
+  vim.schedule(function()
+    if s ~= active or prompting then
+      return
+    end
+    local held = s.held
+    s.held = {}
+    for _, fn in ipairs(held) do
+      fn()
+    end
+  end)
+end
+
 --- `:Scryvim search [query]`.
 ---@param query? string
 function M.search(query)
   local cfg = config.get()
   if not query or query == '' then
     local default = cfg.search.prefill and last_query or nil
-    vim.ui.input({ prompt = 'Scryfall search: ', default = default }, function(input)
+    local prompt = 'Scryfall search: '
+    if active and not active.done then
+      prompt = ('Scryfall search (still searching %s): '):format(active.query)
+    end
+    prompting = true
+    vim.ui.input({ prompt = prompt, default = default }, function(input)
+      prompting = false
       if input and input ~= '' then
         M.search(input)
+      else
+        release()
       end
     end)
     return
   end
   last_query = query
+  -- Replace any search still in flight: its results are dropped, and a
+  -- popup it is still filling stops waiting for more.
+  if active and active.handle and not active.done then
+    active.handle.append({}, false)
+  end
+  local s = { query = query, held = {}, done = false }
+  active = s
   local bufnr = vim.api.nvim_get_current_buf()
   local row = vim.api.nvim_win_get_cursor(0)[1]
   vim.notify('scryvim: searching Scryfall for ' .. query .. '…', vim.log.levels.INFO)
@@ -301,31 +359,36 @@ function M.search(query)
   }
   -- Adapters whose pick() returns an `append` handle open on the first page
   -- of results and take the rest as they arrive.
-  local handle
   local on_page = adapter.streams
     and function(cards, info)
-      if handle then
-        handle.append(cards, not info.last)
-      elseif #cards > 0 then
-        handle = adapter.pick(cards, vim.tbl_extend('force', pick_opts, { loading = not info.last }))
-      end
+      deliver(s, function()
+        if s.handle then
+          s.handle.append(cards, not info.last)
+        elseif #cards > 0 then
+          s.handle = adapter.pick(cards, vim.tbl_extend('force', pick_opts, { loading = not info.last }))
+        end
+      end)
     end
   M.fetch(query, cfg.search.max_pages, function(err, cards)
-    if err then
-      vim.notify('scryvim: search failed: ' .. err, vim.log.levels.WARN)
-    end
-    if handle then
-      handle.append({}, false)
-      return
-    end
-    if err then
-      return
-    end
-    if #cards == 0 then
-      vim.notify('scryvim: no cards match ' .. query, vim.log.levels.INFO)
-      return
-    end
-    adapter.pick(cards, pick_opts)
+    deliver(s, function()
+      if err then
+        vim.notify('scryvim: search failed: ' .. err, vim.log.levels.WARN)
+      end
+      if s.handle then
+        s.handle.append({}, false)
+        return
+      end
+      if err then
+        return
+      end
+      if #cards == 0 then
+        vim.notify('scryvim: no cards match ' .. query, vim.log.levels.INFO)
+        return
+      end
+      adapter.pick(cards, pick_opts)
+    end)
+    -- A search the prompt held back has still finished searching.
+    s.done = true
   end, on_page or nil)
 end
 
