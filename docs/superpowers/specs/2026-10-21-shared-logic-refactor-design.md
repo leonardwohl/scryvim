@@ -153,6 +153,5 @@ buffer wipe closing the timer. The tally and mana specs pass unchanged.
 
 ## Process
 
-- Each PR is its own branch off `main`, via the personal account
-  (`leonardwohl`, `leonard.wohl@gmail.com`).
+- Each PR is its own branch off `main`.
 - Each PR passes `make test` and `make lint` (stylua) before review.

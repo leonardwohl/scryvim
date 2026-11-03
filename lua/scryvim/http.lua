@@ -40,8 +40,13 @@ function M._system(cmd, on_exit)
   return vim.system(cmd, { text = true }, on_exit)
 end
 
+-- Give up on a connection that can't be made, or that stalls (under 1 KB/s
+-- for a minute), so a dead network doesn't leave an update running forever.
+local TIMEOUTS = { '--connect-timeout', '15', '--speed-limit', '1024', '--speed-time', '60' }
+
 local function curl(url, extra)
   local cmd = { 'curl', '-sS', '-L', '-H', 'User-Agent: ' .. USER_AGENT, '-H', 'Accept: ' .. ACCEPT }
+  vim.list_extend(cmd, TIMEOUTS)
   vim.list_extend(cmd, extra)
   cmd[#cmd + 1] = url
   return cmd

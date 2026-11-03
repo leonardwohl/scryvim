@@ -26,6 +26,9 @@ function M.check()
   local data = require('scryvim.data')
   local info = data.info()
   h.info('cache: ' .. info.cache_dir)
+  if not pcall(vim.fn.mkdir, info.cache_dir, 'p') or vim.fn.filewritable(info.cache_dir) ~= 2 then
+    h.error('cache directory is not writable', { 'Set `cache_dir` to a writable directory' })
+  end
   if vim.uv.fs_stat(data.paths().cards) then
     h.ok(('card data present; %d cards loaded'):format(info.count))
   else
