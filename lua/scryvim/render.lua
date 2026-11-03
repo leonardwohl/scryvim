@@ -50,10 +50,77 @@ local function block(face, spacious)
   return table.concat(out, '\n')
 end
 
+-- Scryfall's format keys, in the order they are listed.
+local FORMATS = {
+  { 'standard', 'Standard' },
+  { 'pioneer', 'Pioneer' },
+  { 'modern', 'Modern' },
+  { 'legacy', 'Legacy' },
+  { 'vintage', 'Vintage' },
+  { 'pauper', 'Pauper' },
+  { 'commander', 'Commander' },
+  { 'oathbreaker', 'Oathbreaker' },
+  { 'paupercommander', 'Pauper Commander' },
+  { 'duel', 'Duel Commander' },
+  { 'predh', 'PreDH' },
+  { 'brawl', 'Brawl' },
+  { 'standardbrawl', 'Standard Brawl' },
+  { 'historic', 'Historic' },
+  { 'timeless', 'Timeless' },
+  { 'alchemy', 'Alchemy' },
+  { 'gladiator', 'Gladiator' },
+  { 'penny', 'Penny Dreadful' },
+  { 'premodern', 'Premodern' },
+  { 'oldschool', 'Old School' },
+  { 'future', 'Future' },
+}
+
+--- `**Banned** in Legacy, Modern · **Restricted** in Vintage`, or nil when
+--- the card is banned or restricted nowhere.
+---@param card table
+---@return string?
+function M.legality(card)
+  local legalities = card.legalities
+  if type(legalities) ~= 'table' then
+    return nil
+  end
+  local known, by_status = {}, { banned = {}, restricted = {} }
+  for _, f in ipairs(FORMATS) do
+    known[f[1]] = true
+    local list = by_status[legalities[f[1]]]
+    if list then
+      list[#list + 1] = f[2]
+    end
+  end
+  -- Formats Scryfall adds later, by their key, after the known ones.
+  local extra = {}
+  for key in pairs(legalities) do
+    if not known[key] then
+      extra[#extra + 1] = key
+    end
+  end
+  table.sort(extra)
+  for _, key in ipairs(extra) do
+    local list = by_status[legalities[key]]
+    if list then
+      list[#list + 1] = key
+    end
+  end
+  local parts = {}
+  for _, status in ipairs({ 'banned', 'restricted' }) do
+    local list = by_status[status]
+    if #list > 0 then
+      parts[#parts + 1] = ('**%s** in %s'):format(status:gsub('^%l', string.upper), table.concat(list, ', '))
+    end
+  end
+  return #parts > 0 and table.concat(parts, ' · ') or nil
+end
+
 --- Hover and preview markdown. Multi-face cards get one block per face,
 --- separated by a blank line. With `opts.spacious`, for the preview pane,
 --- a rule follows the type line, abilities are separate paragraphs and
---- faces are divided by rules.
+--- faces are divided by rules. Formats the card is banned or restricted
+--- in follow on a line of their own.
 ---@param card table
 ---@param opts? { spacious: boolean }
 ---@return string
@@ -67,7 +134,12 @@ function M.markdown(card, opts)
   else
     blocks[1] = block(card, spacious)
   end
-  return table.concat(blocks, spacious and '\n\n---\n\n' or '\n\n')
+  local md = table.concat(blocks, spacious and '\n\n---\n\n' or '\n\n')
+  local legality = M.legality(card)
+  if legality then
+    md = md .. (spacious and '\n\n---\n\n' or '\n') .. legality
+  end
+  return md
 end
 
 --- `1 card`, `2 cards`: `n` and `word`, with an `s` unless `n` is 1.

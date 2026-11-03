@@ -347,3 +347,31 @@ describe('render.markdown spacious', function()
     )
   end)
 end)
+
+describe('render.legality', function()
+  local render = require('scryvim.render')
+
+  it('lists banned then restricted formats, in format order', function()
+    assert.are.equal(
+      '**Banned** in Legacy, Commander, newformat · **Restricted** in Vintage',
+      render.legality({
+        legalities = { newformat = 'banned', commander = 'banned', vintage = 'restricted', legacy = 'banned' },
+      })
+    )
+    assert.are.equal('**Banned** in Modern', render.legality({ legalities = { modern = 'banned' } }))
+  end)
+
+  it('is nil when the card is banned and restricted nowhere', function()
+    assert.is_nil(render.legality({ name = 'X' }))
+    assert.is_nil(render.legality({ legalities = {} }))
+  end)
+
+  it('follows the card in compact and spacious markdown', function()
+    local card = { name = 'X', type_line = 'Instant', oracle_text = 'Draw.', legalities = { vintage = 'restricted' } }
+    assert.are.equal('**X**\n*Instant*\nDraw.\n**Restricted** in Vintage', render.markdown(card))
+    assert.are.equal(
+      '**X**\n*Instant*\n\n---\n\nDraw.\n\n---\n\n**Restricted** in Vintage',
+      render.markdown(card, { spacious = true })
+    )
+  end)
+end)

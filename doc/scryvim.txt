@@ -237,7 +237,7 @@ scryvim runs an in-process language server named `scryvim`, enabled for the
 `deck` filetype through |vim.lsp.enable()|. It provides:
 
 - completion of card names,
-- hover with the card's Oracle text (|vim.lsp.buf.hover()|),
+- hover with the card's Oracle text and the formats it is banned or restricted in (|vim.lsp.buf.hover()|),
 - mana costs as inlay hints (|lsp-inlay_hint|),
 - a "Sort by mana value" code action (|vim.lsp.buf.code_action()|),
 - warnings for unknown card names (|vim.diagnostic|),

@@ -58,6 +58,18 @@ end
 ---@return table
 function M.strip(card)
   local out = pick(card, FIELDS)
+  -- Only the formats a card is banned or restricted in: the previews list
+  -- those and nothing else, and most cards have none.
+  if type(card.legalities) == 'table' then
+    local limits
+    for format, status in pairs(card.legalities) do
+      if status == 'banned' or status == 'restricted' then
+        limits = limits or {}
+        limits[format] = status
+      end
+    end
+    out.legalities = limits
+  end
   if type(card.card_faces) == 'table' then
     out.card_faces = {}
     for i, face in ipairs(card.card_faces) do

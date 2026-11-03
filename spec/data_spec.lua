@@ -13,6 +13,16 @@ describe('build', function()
     assert.are.same({ name = 'X', cmc = 1, card_faces = { { name = 'A', mana_cost = '{U}' } } }, out)
   end)
 
+  it('keeps only banned and restricted legalities', function()
+    local out = build.strip({
+      name = 'X',
+      legalities = { standard = 'not_legal', legacy = 'banned', vintage = 'restricted', modern = 'legal' },
+    })
+    assert.are.same({ legacy = 'banned', vintage = 'restricted' }, out.legalities)
+    out = build.strip({ name = 'Y', legalities = { legacy = 'legal' } })
+    assert.is_nil(out.legalities)
+  end)
+
   it('builds cards.json from the fixture, dropping tokens and emblems', function()
     local dir = helpers.load_fixture()
     local f = assert(io.open(dir .. '/cards.json'))
