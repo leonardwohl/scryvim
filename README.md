@@ -8,7 +8,7 @@ Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [S
 - **Search** Scryfall from a popup and insert the cards you pick.
 - **Live counts** in the deck: `// Removal (otag:removal)` shows `12 Removal` at its end.
 - **Sort** by mana value, with lands after spells.
-- **Preview pane** that follows the cursor and shows each card's odds of being cast on curve and its oracle tags.
+- **Preview pane** that follows the cursor and shows each card's odds of being cast on curve, and optionally its oracle tags.
 - **Statusline** text with the deck's size and mana symbols, plus a lualine component.
 
 Card lookups use a local copy of Scryfall's card data, so nothing hits the network while you type. Only search and count lines ask Scryfall.
@@ -112,11 +112,11 @@ Counts leave out the sideboard and maybeboard. With the cursor on a count line, 
 
 ### Preview pane
 
-Decklists are tall and narrow, so a pane on the right follows the cursor. On a card it shows the full card, its odds of being cast on curve, on the play and on the draw, and its Scryfall oracle tags (the `otag:` names, handy for writing count lines). On a count line it lists the cards counted, and on `// count mana symbols` each color's share.
+Decklists are tall and narrow, so a pane on the right follows the cursor. On a card it shows the full card, its odds of being cast on curve, on the play and on the draw, and, if you turn them on, its Scryfall oracle tags (the `otag:` names, handy for writing count lines). On a count line it lists the cards counted, and on `// count mana symbols` each color's share.
 
 It opens on its own when the editor is at least 100 columns wide, and closes when it gets narrower. Set `pane = { auto_open = false }` to only open it with `:Scryvim pane`.
 
-Scryfall's card data has no tags, so the first card the pane shows downloads Scryfall's oracle tag list (about 23 MB, once a week like the card data). Set `pane = { tags = false }` to leave tags out and skip the download.
+Oracle tags are off by default. Scryfall's card data has no tags, so they come from a separate tag list (about 23 MB) that Scryfall doesn't document as a public API. Set `pane = { tags = true }` to show them: the first card the pane shows then downloads the list, and it refreshes once a week like the card data.
 
 The on-curve odds follow Frank Karsten's hypergeometric model, without mulligans. Sources are lands, plus mana creatures and rocks that cost less than the card. A dual land counts for either color but pays only one symbol, and fetch lands count as every color.
 
@@ -152,7 +152,7 @@ Everything works without configuration. To change something, set `vim.g.scryvim`
   picker        = 'buffer',           -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
   search        = { max_pages = 3, prefill = true }, -- 175 cards per page; prompt starts with your last search
   hover         = { max_width = 60 }, -- 0 for no limit
-  pane          = { width = 50, auto_open = true, min_columns = 100, tags = true },
+  pane          = { width = 50, auto_open = true, min_columns = 100, tags = false },
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```
