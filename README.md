@@ -4,7 +4,7 @@ Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [S
 <img width="1335" height="942" alt="Screenshot 2026-10-21 at 22 16 52" src="https://github.com/user-attachments/assets/f2f27fda-7e93-4c69-a7fa-111408a38148" />
 
 - **Completion** of card names, through LSP, so it works with any completion engine.
-- **Mana costs** shown after each card, and **full card text** on hover (`K`).
+- **Mana costs** shown after each card, and **full card text** on hover (`K`), with any formats the card is banned or restricted in and whether it is a Commander Game Changer.
 - **Search** Scryfall from a popup and insert the cards you pick.
 - **Live counts** in the deck: `// Removal (otag:removal)` shows `12 Removal` at its end.
 - **Sort** by mana value, with lands after spells.
