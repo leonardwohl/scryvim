@@ -176,8 +176,8 @@ They also turn off with `counts = false`.
     - on a card line, the card, as |vim.lsp.buf.hover()| shows it but
       with more room: a rule under the type line and a blank line
       between abilities, below a nonland card its odds of being cast
-      on curve (|scryvim-on-curve|), and below that the card's Scryfall
-      oracle tags, the names `otag:` takes (|scryvim-tags|),
+      on curve (|scryvim-on-curve|), and with `pane.tags` on, the card's
+      Scryfall oracle tags, the names `otag:` takes (|scryvim-tags|),
     - on a count line (|scryvim-count-lines|), the total and the cards it
       counts, most copies first,
     - on a `// count mana symbols` line, the totals and each type's share
@@ -266,7 +266,7 @@ wins. `setup()` is optional. Defaults: >lua
                         prefill = true },  -- prompt starts with last search
       hover         = { max_width = 60 },  -- columns; 0 for no limit
       pane          = { width = 50, auto_open = true, min_columns = 100,
-                        tags = true },  -- see |scryvim-tags|
+                        tags = false }, -- see |scryvim-tags|
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <
@@ -305,15 +305,17 @@ refreshed in the background. A failed update leaves the existing cache in
 place; the error is shown in |:checkhealth|.
 
                                                             *scryvim-tags*
-Card objects carry no tags, so for the oracle tags in |:Scryvim-pane| the
+Oracle tags in |:Scryvim-pane| are off by default; set `pane.tags = true`
+to show them. Card objects carry no tags, and the tag list comes from an
+endpoint Scryfall doesn't document as a public API. With tags on, the
 first card the pane shows downloads Scryfall's oracle tag list (about
 23 MB) and builds `tags.txt` in `cache_dir`, in a child Neovim process. The
 pane says the tags are loading meanwhile and fills them in when they are
 ready. Like the card data, the list is refreshed in the background after
 `max_age_days`, and |:Scryvim-update| refreshes it too. Without
 `auto_download` it is only fetched by |:Scryvim-update|. A failed download
-is not retried until then; the pane and |:checkhealth| show the error. Set
-`pane.tags = false` to leave tags out and never download the list.
+is not retried until then; the pane and |:checkhealth| show the error. With
+`pane.tags` off (the default) the list is never downloaded.
 
 ==============================================================================
 8. LUA API                                                       *scryvim-api*

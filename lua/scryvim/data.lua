@@ -299,7 +299,7 @@ function M.update(opts, cb)
     set_stage(nil)
     if err then
       state.last_error = err
-      notify('card data update failed: ' .. err, vim.log.levels.WARN)
+      notify('card data update failed: ' .. err .. ' (run :Scryvim update to retry)', vim.log.levels.WARN)
     end
     local waiters = state.waiters
     state.waiters = {}

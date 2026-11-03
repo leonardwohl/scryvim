@@ -51,6 +51,7 @@ describe('pane', function()
   setup(function()
     helpers.block_network()
     local dir = helpers.load_fixture()
+    vim.g.scryvim = vim.tbl_extend('force', vim.g.scryvim, { pane = { tags = true } })
     require('scryvim.build').tags(helpers.root .. '/spec/fixtures/oracle-tags.json', dir .. '/tags.txt')
   end)
 
@@ -118,7 +119,7 @@ describe('pane', function()
   it('shows the tags once the tag list arrives', function()
     local cache_dir = vim.g.scryvim.cache_dir
     local download = http.download
-    vim.g.scryvim = { cache_dir = vim.fn.tempname(), auto_download = true }
+    vim.g.scryvim = { cache_dir = vim.fn.tempname(), auto_download = true, pane = { tags = true } }
     local finish
     http.download = function(_, path, cb)
       vim.fn.mkdir(vim.fs.dirname(path), 'p')
@@ -136,7 +137,7 @@ describe('pane', function()
       assert.are.equal('Oracle tags: counterspell', pane_lines()[#pane_lines()])
     end)
     http.download = download
-    vim.g.scryvim = { cache_dir = cache_dir, auto_download = false }
+    vim.g.scryvim = { cache_dir = cache_dir, auto_download = false, pane = { tags = true } }
     assert(ok, err)
   end)
 
