@@ -1,7 +1,7 @@
 --- Minimal Scryfall HTTP client: curl via vim.system, per-endpoint rate limits.
 local M = {}
 
-M.version = '0.1.0'
+M.version = '1.0.0'
 
 local USER_AGENT = 'scryvim/' .. M.version
 local ACCEPT = 'application/json;q=0.9,*/*;q=0.8'

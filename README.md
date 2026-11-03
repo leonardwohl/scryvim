@@ -28,21 +28,38 @@ Card lookups use a local copy of Scryfall's card data, so nothing hits the netwo
 [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
-{ 'leonardwohl/scryvim' }
+{ 'leonardwohl/scryvim', version = '*' }  -- latest release
+-- or pin a release: { 'leonardwohl/scryvim', tag = 'v1.0.0' }
+-- or track main:    { 'leonardwohl/scryvim' }
 ```
 
 `vim.pack` (Neovim 0.12+):
 
 ```lua
-vim.pack.add({ 'https://github.com/leonardwohl/scryvim' })
+vim.pack.add({ { src = 'https://github.com/leonardwohl/scryvim', version = vim.version.range('1') } })
+-- or pin a release: version = 'v1.0.0'
+```
+
+[packer.nvim](https://github.com/wbthomason/packer.nvim):
+
+```lua
+use { 'leonardwohl/scryvim', tag = 'v1.0.0' }
+```
+
+[vim-plug](https://github.com/junegunn/vim-plug):
+
+```vim
+Plug 'leonardwohl/scryvim', { 'tag': 'v1.0.0' }
 ```
 
 Or as a plain package:
 
 ```sh
-git clone https://github.com/leonardwohl/scryvim ~/.local/share/nvim/site/pack/plugins/start/scryvim
+git clone --branch v1.0.0 https://github.com/leonardwohl/scryvim ~/.local/share/nvim/site/pack/plugins/start/scryvim
 nvim -c 'helptags ALL' -c q
 ```
+
+Releases follow [semantic versioning](https://semver.org) and are tagged `vX.Y.Z`; see [Releases](https://github.com/leonardwohl/scryvim/releases) for what changed.
 
 No `setup()` call is needed, and startup cost is tiny, so don't lazy-load it on `ft = 'deck'`: the plugin itself is what gives `.deck` files that filetype.
 
