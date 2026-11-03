@@ -42,9 +42,17 @@ suite('Scryfall (live)', function()
       return c.name == 'Lightning Bolt'
     end)
     assert.truthy(bolt, vim.inspect(cards))
+    -- Legalities come through only where the card is banned or restricted,
+    -- which changes with ban announcements, so they are checked apart.
+    for format, status in pairs(bolt.legalities or {}) do
+      assert.truthy(status == 'banned' or status == 'restricted', format .. ': ' .. status)
+    end
+    local keys = vim.tbl_filter(function(k)
+      return k ~= 'legalities' and k ~= 'game_changer'
+    end, vim.tbl_keys(bolt))
     assert.are.same(
       { 'cmc', 'mana_cost', 'name', 'oracle_id', 'oracle_text', 'scryfall_uri', 'type_line' },
-      vim.fn.sort(vim.tbl_keys(bolt))
+      vim.fn.sort(keys)
     )
     assert.are.equal('{R}', bolt.mana_cost)
 
