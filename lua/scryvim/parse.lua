@@ -1,6 +1,15 @@
 --- Pure decklist line parser. No Neovim state.
 local M = {}
 
+--- Byte just past a sideboard marker (`SB:` or `Sideboard:`, any case) at
+--- `pos`, or nil when there is none.
+local function sb_marker(line, pos)
+  local word, after = line:match('^(%a+):%s*()', pos)
+  if word and (word:lower() == 'sb' or word:lower() == 'sideboard') then
+    return after
+  end
+end
+
 local SECTIONS = {
   deck = true,
   sideboard = true,
@@ -20,7 +29,7 @@ local SECTIONS = {
 ---@return table|nil
 function M.card(line, allow_empty)
   local pos = line:match('^%s*()')
-  pos = line:match('^[Ss][Bb]:%s*()', pos) or pos
+  pos = sb_marker(line, pos) or pos
 
   local count, count_range
   local cs, digits, ce, after = line:match('^()(%d+)()[xX]?%s+()', pos)
@@ -114,11 +123,12 @@ end
 --- Sections whose cards are outside the main deck.
 M.SIDE_SECTIONS = { sideboard = true, maybeboard = true }
 
---- True for a card line marked `SB:` (a sideboard card outside a section).
+--- True for a card line marked `SB:` or `Sideboard:` (a sideboard card
+--- outside a section).
 ---@param parsed table
 ---@return boolean
 function M.is_sb(parsed)
-  return parsed.kind == 'card' and parsed.prefix:match('^%s*[Ss][Bb]:') ~= nil
+  return parsed.kind == 'card' and sb_marker(parsed.prefix, parsed.prefix:match('^%s*()')) ~= nil
 end
 
 --- True for lines that separate sortable blocks.

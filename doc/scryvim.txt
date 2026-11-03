@@ -49,7 +49,7 @@ Lines are one of:
 
   card     `4 Lightning Bolt`, `4x Lightning Bolt`, `Lightning Bolt`,
            `4 Lightning Bolt (M10) 146`, `4 Lightning Bolt [M10]`,
-           `SB: 2 Duress`
+           `SB: 2 Duress`, `Sideboard: 2 Duress`
   section  `Deck`, `Sideboard`, `Commander`, `Companion`, `Maybeboard`
            (case-insensitive, optional trailing `:`)
   comment  `// ...` or `# ...`
@@ -110,7 +110,8 @@ Set codes and collector numbers are preserved but ignored for lookups.
     Count the cards that match {query} (full Scryfall syntax), by quantity:
     20 Mountains and 5 other red sources make 25 for `produces:r`. Without a
     range, counts the whole buffer except Sideboard and Maybeboard sections
-    and `SB:` lines; with a range, counts every card line in it.
+    and `SB:` or `Sideboard:` lines; with a range, counts every card line in
+    it.
 
     The query runs on Scryfall, limited to the deck's card names, in
     batches of about 45 names. Results are kept for the session, so
