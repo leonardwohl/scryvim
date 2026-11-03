@@ -359,11 +359,17 @@ describe('render.legality', function()
       })
     )
     assert.are.equal('**Banned** in Modern', render.legality({ legalities = { modern = 'banned' } }))
+    assert.are.equal(
+      '**Banned** in Modern · **Game Changer** in Commander',
+      render.legality({ legalities = { modern = 'banned' }, game_changer = true })
+    )
+    assert.are.equal('**Game Changer** in Commander', render.legality({ game_changer = true }))
   end)
 
   it('is nil when the card is banned and restricted nowhere', function()
     assert.is_nil(render.legality({ name = 'X' }))
     assert.is_nil(render.legality({ legalities = {} }))
+    assert.is_nil(render.legality({ game_changer = false }))
   end)
 
   it('follows the card in compact and spacious markdown', function()

@@ -70,6 +70,10 @@ function M.strip(card)
     end
     out.legalities = limits
   end
+  -- Commander's Game Changer list; kept only when set, like the above.
+  if card.game_changer == true then
+    out.game_changer = true
+  end
   if type(card.card_faces) == 'table' then
     out.card_faces = {}
     for i, face in ipairs(card.card_faces) do

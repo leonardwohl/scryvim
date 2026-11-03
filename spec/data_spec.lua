@@ -19,8 +19,10 @@ describe('build', function()
       legalities = { standard = 'not_legal', legacy = 'banned', vintage = 'restricted', modern = 'legal' },
     })
     assert.are.same({ legacy = 'banned', vintage = 'restricted' }, out.legalities)
-    out = build.strip({ name = 'Y', legalities = { legacy = 'legal' } })
+    out = build.strip({ name = 'Y', legalities = { legacy = 'legal' }, game_changer = false })
     assert.is_nil(out.legalities)
+    assert.is_nil(out.game_changer)
+    assert.is_true(build.strip({ name = 'Z', game_changer = true }).game_changer)
   end)
 
   it('builds cards.json from the fixture, dropping tokens and emblems', function()

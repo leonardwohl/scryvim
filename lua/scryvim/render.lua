@@ -75,15 +75,13 @@ local FORMATS = {
   { 'future', 'Future' },
 }
 
---- `**Banned** in Legacy, Modern · **Restricted** in Vintage`, or nil when
---- the card is banned or restricted nowhere.
+--- `**Banned** in Legacy, Modern · **Restricted** in Vintage`, then
+--- `**Game Changer** in Commander` for cards on that list, or nil when
+--- none of these apply.
 ---@param card table
 ---@return string?
 function M.legality(card)
-  local legalities = card.legalities
-  if type(legalities) ~= 'table' then
-    return nil
-  end
+  local legalities = type(card.legalities) == 'table' and card.legalities or {}
   local known, by_status = {}, { banned = {}, restricted = {} }
   for _, f in ipairs(FORMATS) do
     known[f[1]] = true
@@ -112,6 +110,9 @@ function M.legality(card)
     if #list > 0 then
       parts[#parts + 1] = ('**%s** in %s'):format(status:gsub('^%l', string.upper), table.concat(list, ', '))
     end
+  end
+  if card.game_changer == true then
+    parts[#parts + 1] = '**Game Changer** in Commander'
   end
   return #parts > 0 and table.concat(parts, ' · ') or nil
 end
