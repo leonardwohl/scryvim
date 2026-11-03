@@ -337,6 +337,69 @@ describe('picker', function()
     assert.are.same({ false, 't:instant c:r', false }, defaults)
   end)
 
+  describe('while a search is in flight', function()
+    local orig_input, orig_fetch, notify
+    local fetches, input_cb, picks
+
+    before_each(function()
+      orig_input, orig_fetch, notify = vim.ui.input, picker.fetch, vim.notify
+      fetches, picks = {}, {}
+      vim.ui.input = function(opts, cb)
+        input_cb = cb
+        picks[#picks + 1] = { 'prompt', opts.prompt }
+      end
+      picker.fetch = function(query, _, cb)
+        fetches[query] = cb
+      end
+      vim.notify = function() end
+      vim.g.scryvim = {
+        picker = {
+          pick = function(items, opts)
+            picks[#picks + 1] = { 'pick', opts.prompt, #items }
+          end,
+        },
+      }
+      buffer({ '' })
+    end)
+
+    after_each(function()
+      vim.ui.input, picker.fetch, vim.notify = orig_input, orig_fetch, notify
+      vim.g.scryvim = nil
+    end)
+
+    it('holds results while the prompt is open and drops them for a new search', function()
+      picker.search('bolt')
+      picker.search()
+      fetches.bolt(nil, { card('Bolt') })
+      assert.are.same({ { 'prompt', 'Scryfall search (still searching bolt): ' } }, picks)
+      input_cb('shock')
+      fetches.shock(nil, { card('Shock') })
+      vim.wait(50)
+      assert.are.same({ 'pick', 'Scryfall: shock', 1 }, picks[2])
+      assert.are.equal(2, #picks)
+    end)
+
+    it('shows held results once the prompt is cancelled', function()
+      picker.search('bolt')
+      picker.search()
+      fetches.bolt(nil, { card('Bolt') })
+      input_cb(nil)
+      assert.are.equal(1, #picks)
+      vim.wait(100, function()
+        return #picks == 2
+      end)
+      assert.are.same({ 'pick', 'Scryfall: bolt', 1 }, picks[2])
+    end)
+
+    it('drops a slow reply once a newer search started', function()
+      picker.search('bolt')
+      picker.search('shock')
+      fetches.shock(nil, { card('Shock') })
+      fetches.bolt(nil, { card('Bolt') })
+      assert.are.same({ { 'pick', 'Scryfall: shock', 1 } }, picks)
+    end)
+  end)
+
   it('resolves auto in order snacks, telescope, fzf-lua, then vim.ui.select', function()
     local orig = picker._available
     local installed = {}
