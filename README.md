@@ -93,6 +93,7 @@ SB: 2 Duress
 | `:[range]Scryvim count <query>` | Count the cards matching a Scryfall query                    |
 | `:[range]Scryvim mana`          | Count mana symbols in mana costs, by color                   |
 | `:Scryvim pane`                 | Toggle the preview pane                                      |
+| `:Scryvim open`                 | Open the card under the cursor on Scryfall in the browser    |
 | `:Scryvim update`               | Refresh the card data and oracle tags now                    |
 | `:Scryvim info`                 | Card count and cache age                                     |
 
@@ -104,7 +105,10 @@ There are no default keymaps. Map the `<Plug>` ones if you like:
 vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
 vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
 vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
+vim.keymap.set('n', '<leader>mf', '<Plug>(scryvim-open)')
 ```
+
+`:Scryvim open` searches Scryfall for the exact card name on the line (`!"Lightning Bolt"`), leaving out the count, `SB:` and set code, and opens the result with `vim.ui.open()`.
 
 ### Search
 

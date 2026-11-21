@@ -205,6 +205,13 @@ function M.pane()
   require('scryvim.pane').toggle()
 end
 
+--- Open the card on the cursor line on Scryfall in the browser.
+---@param bufnr? integer
+---@param row? integer
+function M.open(bufnr, row)
+  require('scryvim.open').open(buf(bufnr), row or vim.api.nvim_win_get_cursor(0)[1])
+end
+
 --- Force a card data refresh, and an oracle tags one.
 function M.update()
   require('scryvim.data').update({ force = true, announce = true })
@@ -243,6 +250,9 @@ M.subcommands = {
   pane = function()
     M.pane()
   end,
+  open = function()
+    M.open()
+  end,
   update = function()
     M.update()
   end,
@@ -256,7 +266,7 @@ function M.command(o)
   local sub = o.fargs[1]
   local fn = sub and M.subcommands[sub]
   if not fn then
-    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|pane|update|info}', vim.log.levels.ERROR)
+    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|pane|open|update|info}', vim.log.levels.ERROR)
     return
   end
   fn(o)
