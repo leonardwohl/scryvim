@@ -95,6 +95,7 @@ SB: 2 Duress
 | `:[range]Scryvim mana`          | Count mana symbols in mana costs, by color                   |
 | `:Scryvim pane`                 | Toggle the preview pane                                      |
 | `:Scryvim open`                 | Open the card under the cursor on Scryfall in the browser    |
+| `:Scryvim printing`             | Pick a printing of the card under the cursor                 |
 | `:Scryvim render [file ...]`    | Write a Markdown page of card images for the deck            |
 | `:Scryvim update`               | Refresh the card data and oracle tags now                    |
 | `:Scryvim info`                 | Card count and cache age                                     |
@@ -108,6 +109,7 @@ vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
 vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
 vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 vim.keymap.set('n', '<leader>mf', '<Plug>(scryvim-open)')
+vim.keymap.set('n', '<leader>mP', '<Plug>(scryvim-printing)')
 ```
 
 `:Scryvim open` searches Scryfall for the exact card name on the line (`!"Lightning Bolt"`), leaving out the count, `SB:` and set code, and opens the result with `vim.ui.open()`. Over SSH a browser on the remote host wouldn't reach you, so it copies the link to your local clipboard instead, through your terminal (OSC 52). Set `open = 'browser'` or `open = 'copy'` to always do one or the other.
@@ -161,7 +163,7 @@ Options such as `{ 'scryvim', lands = true }` are in `:h scryvim-statusline`.
 
 `:Scryvim render` writes a Markdown page of the deck next to it, named after it (`burn.deck` becomes `burn.md`). Each section and each comment above cards becomes a heading with its card total, and the cards under it a grid of card images with their counts. Commit the page with the deck: GitHub shows the deck as cards, and in a pull request the page's diff has a line for each card that changed. See [`examples/`](examples) for a rendered deck.
 
-Images link to Scryfall's image server instead of being saved in the repo, and rendering an unchanged deck gives the same file, so the page only changes when the deck does. Set `render = { on_save = true }` to update the page whenever you save the deck.
+Images link to Scryfall's image server instead of being saved in the repo, and rendering an unchanged deck gives the same file, so the page only changes when the deck does. Cards show Scryfall's default printing, or the one on the line: `4 Lightning Bolt (M10) 146` shows that exact card, and `[M10]` one from that set. `:Scryvim printing` lists a card's printings, newest first, in your picker, and sets the line to the one you pick. Printings are looked up on Scryfall once and saved. Set `render = { on_save = true }` to update the page whenever you save the deck.
 
 It also runs headless, for scripts and git hooks. It waits for the card data, renders, and exits with status 1 if something failed:
 

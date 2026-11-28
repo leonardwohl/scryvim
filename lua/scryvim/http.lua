@@ -27,9 +27,11 @@ local function split_url(url)
   return host or '', (path ~= nil and path ~= '') and path or '/'
 end
 
+-- Slow endpoints each have a queue; every other path on a host shares one,
+-- so lookups like `/cards/m10/146` and `/cards/m10/147` are spaced out too.
 local function queue_for(url)
   local host, path = split_url(url)
-  local key = host .. path
+  local key = host .. (SLOW[path] and path or '/*')
   local q = queues[key]
   if not q then
     q = { items = {}, next_at = 0, waiting = false, interval = SLOW[path] and M.SLOW_MS or M.FAST_MS }

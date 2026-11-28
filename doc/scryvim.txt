@@ -55,7 +55,11 @@ Lines are one of:
   comment  `// ...` or `# ...`
   blank    empty or whitespace only
 
-Set codes and collector numbers are preserved but ignored for lookups.
+A set code in parentheses or brackets, optionally followed by a collector
+number, names a printing: `(M10) 146`, `(M10)` or `[M10]`. Lookups,
+counts and hover use the card's name and ignore it; deck pages show that
+printing (|scryvim-render|), and |:Scryvim-printing| sets it. Anything
+after the number, such as a `*F*` foil marker, is kept.
 
 ==============================================================================
 4. COMMANDS AND MAPPINGS                                    *scryvim-commands*
@@ -233,6 +237,17 @@ They also turn off with `counts = false`.
     'browser'     always open the browser
     'copy'        always copy the link
 
+:Scryvim printing                                      *:Scryvim-printing*
+    Pick a printing of the card on the cursor line and set the line's set
+    code and collector number to it: `4 Lightning Bolt` becomes
+    `4 Lightning Bolt (M10) 146`. The list comes from Scryfall, newest
+    first, with each printing's set code, number, set name and release
+    date; the line's current printing is marked `*`. It uses the same
+    picker as search (see `picker` in |scryvim-config|), and the preview
+    shows the set and rarity above the card. Like search, it stops after
+    `search.max_pages` pages of 175, so cards with over 500 printings,
+    such as basic lands, list only the newest.
+
 :Scryvim render [--check] [{file} ...]                   *:Scryvim-render*
     Write a Markdown page of card images for the deck, next to it and
     named after it: `burn.deck` becomes `burn.md`. Commit it with the
@@ -258,12 +273,14 @@ scryvim defines no default keymaps. These are provided:
     <Plug>(scryvim-sort)      normal and visual mode    *<Plug>(scryvim-sort)*
     <Plug>(scryvim-pane)      normal mode               *<Plug>(scryvim-pane)*
     <Plug>(scryvim-open)      normal mode               *<Plug>(scryvim-open)*
+    <Plug>(scryvim-printing)  normal mode           *<Plug>(scryvim-printing)*
 
 Example: >lua
     vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
     vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
     vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
     vim.keymap.set('n', '<leader>mf', '<Plug>(scryvim-open)')
+    vim.keymap.set('n', '<leader>mP', '<Plug>(scryvim-printing)')
 <
 ==============================================================================
 5. LSP FEATURES                                                  *scryvim-lsp*
@@ -379,10 +396,20 @@ GitHub. The page follows the decklist:
   heading at the end.
 
 Images link to Scryfall's image server (cards.scryfall.io) rather than
-being saved, so the page is small. Each card shows the printing in the
-card data, which is Scryfall's default printing for the card; set codes on
-card lines are ignored, as for lookups. When Scryfall changes a card's
-default printing, the next render shows the new image.
+being saved, so the page is small.
+
+A card line with a set code shows that printing: `(M10) 146` by set and
+collector number, `[M10]` (no number) as Scryfall's pick from that set.
+Each printing is looked up on Scryfall the first time it's rendered and
+saved to `printings.json` in `cache_dir`, so later renders don't ask
+again and work offline. A printing Scryfall doesn't have, or that is of
+another card, shows the default image with a warning. If a lookup fails
+(no network), the deck's page is not written, rather than written with the
+wrong images.
+
+Other cards show the printing in the card data, Scryfall's default
+printing for the card. When Scryfall changes a card's default printing,
+the next render shows the new image.
 
 Rendering an unchanged deck again gives the same file, so the page only
 changes in a diff when the deck does. The page's first line says it was
@@ -401,7 +428,7 @@ unless something goes wrong.
     nvim --headless -c 'Scryvim render decks/*.deck'
 <
 It loads your config like any Neovim, waits for the card data (downloading
-it if needed), renders, and quits: with status 0, or 1 if a deck couldn't
+it if needed) and any printings to look up, renders, and quits: with status 0, or 1 if a deck couldn't
 be rendered or, with `--check`, a page is out of date. Messages go to
 stderr.
 
@@ -436,12 +463,17 @@ require('scryvim').mana({buf}, {first}, {last})
                                           Same as |:Scryvim-mana|; 1-based
                                           inclusive lines.
 require('scryvim').pane()                 Same as |:Scryvim-pane|.
+require('scryvim').printing({buf}, {row})  Same as |:Scryvim-printing|;
+                                          {row} is 1-based, the cursor line
+                                          by default.
 require('scryvim').open({buf}, {row})     Same as |:Scryvim-open|; {row} is
                                           1-based, the cursor line by
                                           default.
 require('scryvim').render({opts})         Same as |:Scryvim-render|; {opts}
                                           has `files` (a list), `check` and
-                                          `bufnr`. Returns true on success.
+                                          `bufnr`. Returns true on success,
+                                          or nil while printings are looked
+                                          up (it then reports when done).
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
 require('scryvim').statusline({opts})     Deck stats for 'statusline' and

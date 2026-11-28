@@ -34,7 +34,11 @@ function M.pick(items, opts)
         results = items,
         entry_maker = function(card)
           local text = opts.format_item(card)
-          return { value = card, display = opts.color and colored(text) or icons.replace(text), ordinal = card.name }
+          return {
+            value = card,
+            display = opts.color and colored(text) or icons.replace(text),
+            ordinal = opts.ordinal and opts.ordinal(card) or card.name,
+          }
         end,
       }),
       sorter = conf.generic_sorter({}),
