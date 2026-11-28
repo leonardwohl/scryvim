@@ -198,6 +198,12 @@ function M.ready()
   return state.loaded
 end
 
+--- True while card data is on its way but not loaded yet.
+---@return boolean
+function M.loading()
+  return not state.loaded and (state.stage ~= nil or state.updating)
+end
+
 --- What a running update is doing: 'checking', 'downloading', 'building',
 --- 'loading', or nil when idle.
 function M.stage()

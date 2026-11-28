@@ -1,4 +1,5 @@
 local count = require('scryvim.count')
+local data = require('scryvim.data')
 local http = require('scryvim.http')
 
 local CARDS = {
@@ -125,9 +126,20 @@ describe('count.run', function()
   local orig = http.get_json
   local requests
 
-  -- Scryfall stand-in: the matching card names, by full name.
+  -- Scryfall stand-in: the matching card names, by full name. Honors
+  -- `opts.wanted` like the real queue, checked when the reply would go.
   local function serve(matching)
-    http.get_json = function(url, cb)
+    http.get_json = function(url, cb, opts)
+      if opts and opts.wanted then
+        local wanted = opts.wanted
+        local inner = cb
+        cb = function(...)
+          if not wanted() then
+            return inner(http.DROPPED)
+          end
+          inner(...)
+        end
+      end
       local query = vim.uri_decode(url:match('q=(.*)$'))
       requests[#requests + 1] = query
       local data = {}
@@ -153,13 +165,22 @@ describe('count.run', function()
     return err, result
   end
 
+  local dir
+
   before_each(function()
     requests = {}
+    dir = vim.fn.tempname()
+    vim.fn.mkdir(dir, 'p')
+    vim.g.scryvim = { cache_dir = dir, auto_download = false }
+    data._reset()
     count._reset()
   end)
 
   after_each(function()
     http.get_json = orig
+    data._reset()
+    count._reset()
+    vim.g.scryvim = nil
   end)
 
   it('totals matches by quantity', function()
@@ -233,5 +254,135 @@ describe('count.run', function()
     serve({ Mountain = true })
     local _, result = run('(', { { name = 'Mountain', count = 1 } })
     assert.are.equal(1, result.total)
+  end)
+
+  it('waits on a query already on the way instead of asking again', function()
+    serve({ Mountain = true })
+    local results = {}
+    for i = 1, 2 do
+      count.run('produces:r', { { name = 'Mountain', count = 20 }, { name = 'Island', count = i } }, function(err, r)
+        results[i] = { err = err, r = r }
+      end)
+    end
+    assert(vim.wait(1000, function()
+      return results[1] and results[2]
+    end))
+    assert.are.equal(1, #requests)
+    assert.are.equal(20, results[1].r.total)
+    assert.are.equal(20, results[2].r.total)
+  end)
+
+  it('drops a request no count wants any more', function()
+    serve({ Mountain = true })
+    local stale, results = false, {}
+    count.run('produces:r', { { name = 'Mountain', count = 20 } }, function(err, r)
+      results[1] = { err = err, r = r }
+    end, {
+      wanted = function()
+        return not stale
+      end,
+    })
+    stale = true
+    assert(vim.wait(1000, function()
+      return results[1]
+    end))
+    assert.are.equal(http.DROPPED, results[1].err)
+    -- Not cached: the next count asks again.
+    local _, result = run('produces:r', { { name = 'Mountain', count = 20 } })
+    assert.are.equal(20, result.total)
+    assert.are.equal(2, #requests)
+  end)
+
+  it('keeps a request that another count still wants', function()
+    serve({ Mountain = true })
+    local results = {}
+    count.run('produces:r', { { name = 'Mountain', count = 20 } }, function(err, r)
+      results[1] = { err = err, r = r }
+    end, {
+      wanted = function()
+        return false
+      end,
+    })
+    local _, result = run('produces:r', { { name = 'Mountain', count = 20 } })
+    assert.are.equal(20, result.total)
+    assert.are.equal(1, #requests)
+  end)
+
+  it('does not ask about names the card data does not know', function()
+    data.index({ { name = 'Mountain' } })
+    serve({ Mountain = true })
+    local _, result = run('produces:r', { { name = 'Mountain', count = 20 }, { name = 'Sol Rin', count = 1 } })
+    assert.are.equal(20, result.total)
+    assert.are.equal(1, #requests)
+    assert.falsy(requests[1]:find('Sol Rin', 1, true))
+    -- Nothing left to ask about: no request at all.
+    run('produces:r', { { name = 'Sol', count = 1 } })
+    assert.are.equal(1, #requests)
+  end)
+
+  it('does not resend a query Scryfall warned about', function()
+    http.get_json = function(_, cb)
+      requests[#requests + 1] = true
+      vim.schedule(function()
+        cb(nil, { object = 'list', data = {}, warnings = { 'Unknown keyword “prodces”.' } })
+      end)
+    end
+    local err = run('prodces:r', { { name = 'Mountain', count = 20 } })
+    assert.truthy(err:find('prodces', 1, true))
+    err = run('prodces:r', { { name = 'Island', count = 1 } })
+    assert.truthy(err:find('prodces', 1, true))
+    assert.are.equal(1, #requests)
+  end)
+
+  describe('on disk', function()
+    local function write_meta(version)
+      local f = assert(io.open(dir .. '/meta.json', 'w'))
+      f:write(vim.json.encode({ updated_at = version }))
+      f:close()
+    end
+
+    it('keeps answers across sessions for the same card data', function()
+      write_meta('v1')
+      serve({ Mountain = true })
+      run('produces:r', { { name = 'Mountain', count = 20 }, { name = 'Island', count = 1 } })
+      count.save()
+      count._reset()
+      local _, result = run('produces:r', { { name = 'Mountain', count = 20 }, { name = 'Island', count = 1 } })
+      assert.are.equal(20, result.total)
+      assert.are.equal(1, #requests)
+    end)
+
+    it('drops saved answers when the card data changes', function()
+      write_meta('v1')
+      serve({ Mountain = true })
+      run('produces:r', { { name = 'Mountain', count = 20 } })
+      count.save()
+      count._reset()
+      write_meta('v2')
+      run('produces:r', { { name = 'Mountain', count = 20 } })
+      assert.are.equal(2, #requests)
+    end)
+
+    it('keeps answers another instance saved in the meantime', function()
+      write_meta('v1')
+      serve({ Mountain = true })
+      run('produces:r', { { name = 'Mountain', count = 20 } })
+      -- Another instance sharing the cache dir saves first.
+      local f = assert(io.open(dir .. '/counts.json', 'w'))
+      f:write(vim.json.encode({ version = 'v1', queries = { ['produces:r'] = { island = true } } }))
+      f:close()
+      count.save()
+      count._reset()
+      local _, result = run('produces:r', { { name = 'Mountain', count = 20 }, { name = 'Island', count = 1 } })
+      assert.are.equal(21, result.total)
+      assert.are.equal(1, #requests)
+    end)
+
+    it('saves nothing without card data on disk', function()
+      serve({ Mountain = true })
+      run('produces:r', { { name = 'Mountain', count = 20 } })
+      count.save()
+      assert.is_nil(vim.uv.fs_stat(dir .. '/counts.json'))
+    end)
   end)
 end)

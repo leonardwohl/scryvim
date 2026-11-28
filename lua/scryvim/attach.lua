@@ -2,9 +2,10 @@
 --- loads: the lifecycle shared by the count line totals and the colored
 --- mana costs.
 ---
---- One timer per buffer: card data loads, buffer reloads and the attach
---- itself render after 0 ms, edits after `edit_delay` (ms, or a function
---- returning it). `render(buf, current)` draws into `ns`; `current()` is
+--- One timer per buffer: card data loads (or loads that fail), buffer
+--- reloads and the attach itself render after 0 ms, edits after
+--- `edit_delay` (ms, or a function returning it). `render(buf, current)`
+--- draws into `ns`; `current()` is
 --- true while the buffer is still attached and nothing newer is on the
 --- way, so a render that waits on Scryfall can drop replies for an old
 --- buffer state.
@@ -61,9 +62,19 @@ function M.new(ns, opts)
     local state = { timer = assert(vim.uv.new_timer()), generation = 0 }
     attached[buf] = state
     -- Store loads turn typed names into full card names.
-    state.unsubscribe = data.on_ready(function()
+    local unready = data.on_ready(function()
       schedule(buf, 0)
     end)
+    -- A load that fails ends without a store load; render without it.
+    local unprogress = data.on_progress(function(stage)
+      if stage == nil then
+        schedule(buf, 0)
+      end
+    end)
+    state.unsubscribe = function()
+      unready()
+      unprogress()
+    end
     vim.api.nvim_buf_attach(buf, false, {
       on_lines = function()
         if attached[buf] ~= state then
