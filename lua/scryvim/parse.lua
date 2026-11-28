@@ -41,6 +41,20 @@ function M.card(line, allow_empty)
     return nil
   end
 
+  -- `(M10) 146`, `(M10)` or `[M10]`: the set code, lowercased, and the
+  -- collector number after it, if any. A `*F*` style marker after the
+  -- code is not a number.
+  local set, number
+  local suffix = line:sub(name_end + 1)
+  local code, after = suffix:match('^%s+%(%s*([^()]-)%s*%)()')
+  if not code then
+    code, after = suffix:match('^%s+%[%s*([^%[%]]-)%s*%]()')
+  end
+  if code and code ~= '' then
+    set = code:lower()
+    number = suffix:match('^%s+([^%s%*]+)', after)
+  end
+
   return {
     kind = 'card',
     count = count or 1,
@@ -48,6 +62,8 @@ function M.card(line, allow_empty)
     prefix = line:sub(1, pos - 1),
     suffix = line:sub(name_end + 1),
     has_set = set_start ~= nil,
+    set = set,
+    number = number,
     count_range = count_range,
     name_range = { pos - 1, name_end },
   }

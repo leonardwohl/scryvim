@@ -72,17 +72,20 @@ local function display_name(entry, card)
   return entry.name
 end
 
-local function cell(entry, card, width)
+-- `printing` (the line's set and number, looked up) takes the place of
+-- the card data's default printing.
+local function cell(entry, card, printing, width)
   local caption = ('<b>%d</b> %s'):format(entry.count, html(display_name(entry, card)))
-  local img = card and image(card)
+  local shown = printing or card
+  local img = shown and image(shown)
   if not img then
     return ('<td align="center" valign="top">%s<br><sub>%s</sub></td>'):format(
       caption,
       card and 'no image' or 'unknown card'
     )
   end
-  local tag = ('<img src="%s%s" width="%d" alt="%s">'):format(M.IMAGE_URL, img, width, html(card.name))
-  local link = page(card)
+  local tag = ('<img src="%s%s" width="%d" alt="%s">'):format(M.IMAGE_URL, img, width, html(shown.name))
+  local link = page(shown)
   if link then
     tag = ('<a href="%s">%s</a>'):format(html(link), tag)
   end
@@ -98,7 +101,7 @@ local function grid(entries, lookup, opts, out)
       end
       out[#out + 1] = '<tr>'
     end
-    out[#out + 1] = cell(e, lookup(e.name), opts.width)
+    out[#out + 1] = cell(e, lookup(e.name), opts.printing and opts.printing(e) or nil, opts.width)
   end
   out[#out + 1] = '</tr>'
   out[#out + 1] = '</table>'
@@ -148,13 +151,13 @@ function M.nodes(lines)
   for i, p in ipairs(parsed) do
     if p.kind == 'card' then
       if parse.is_sb(p) and not side then
-        sb[#sb + 1] = { name = p.name, count = p.count }
+        sb[#sb + 1] = { name = p.name, count = p.count, set = p.set, number = p.number }
       else
         if not group then
           group = { kind = 'cards', entries = {} }
           nodes[#nodes + 1] = group
         end
-        group.entries[#group.entries + 1] = { name = p.name, count = p.count }
+        group.entries[#group.entries + 1] = { name = p.name, count = p.count, set = p.set, number = p.number }
       end
     else
       group = nil
@@ -203,7 +206,10 @@ end
 
 --- Render the decklist `lines` as Markdown.
 ---@param lines string[]
----@param opts { lookup: fun(name: string): table|nil, title: string, source?: string, columns?: integer, width?: integer }
+--- `opts.printing(entry)` gives the looked-up printing for an entry with a
+--- set code (`entry.set`, `entry.number`), whose image then replaces the
+--- default one.
+---@param opts { lookup: fun(name: string): table|nil, printing?: fun(entry: table): table|nil, title: string, source?: string, columns?: integer, width?: integer }
 ---@return string
 function M.render(lines, opts)
   opts = vim.tbl_extend('keep', opts, { columns = 5, width = 140 })
@@ -265,6 +271,17 @@ local function read(path)
   return s
 end
 
+--- The lines of the file at `path`, or nil and an error.
+---@param path string
+---@return string[]|nil, string|nil
+function M.read_lines(path)
+  local s = read(path)
+  if not s then
+    return nil, 'cannot read ' .. path
+  end
+  return vim.split((s:gsub('\r', '')), '\n', { plain = true })
+end
+
 --- Render the deck at `path` (from `lines`, or the file) and write it to
 --- its Markdown file, unless that is already up to date. With `check`,
 --- nothing is written.
@@ -272,16 +289,16 @@ end
 --- Returns `'written'`, `'unchanged'` or (with `check`) `'outdated'`, or
 --- nil and an error.
 ---@param path string
----@param opts { lookup: fun(name: string): table|nil, lines?: string[], check?: boolean, columns?: integer, width?: integer }
+---@param opts { lookup: fun(name: string): table|nil, printing?: fun(entry: table): table|nil, lines?: string[], check?: boolean, columns?: integer, width?: integer }
 ---@return string|nil status, string|nil err
 function M.write(path, opts)
   local lines = opts.lines
   if not lines then
-    local s = read(path)
-    if not s then
-      return nil, 'cannot read ' .. path
+    local err
+    lines, err = M.read_lines(path)
+    if not lines then
+      return nil, err
     end
-    lines = vim.split(s:gsub('\r', ''), '\n', { plain = true })
   end
   local target = M.target(path)
   if vim.fn.fnamemodify(target, ':p') == vim.fn.fnamemodify(path, ':p') then
@@ -290,6 +307,7 @@ function M.write(path, opts)
   local name = vim.fn.fnamemodify(path, ':t')
   local out = M.render(lines, {
     lookup = opts.lookup,
+    printing = opts.printing,
     title = vim.fn.fnamemodify(path, ':t:r'),
     source = name,
     columns = opts.columns,

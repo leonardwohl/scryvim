@@ -36,10 +36,10 @@
 
 <table>
 <tr>
-<td align="center" valign="top"><a href="https://scryfall.com/card/msc/806/lightning-bolt"><img src="https://cards.scryfall.io/normal/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg" width="140" alt="Lightning Bolt"></a><br><b>4</b> Lightning Bolt</td>
-<td align="center" valign="top"><a href="https://scryfall.com/card/dsc/114/counterspell"><img src="https://cards.scryfall.io/normal/front/4/f/4f616706-ec97-4923-bb1e-11a69fbaa1f8.jpg" width="140" alt="Counterspell"></a><br><b>4</b> Counterspell</td>
+<td align="center" valign="top"><a href="https://scryfall.com/card/m10/146/lightning-bolt"><img src="https://cards.scryfall.io/normal/front/4/3/435589bb-27c6-4a6d-9d63-394d5092b9d8.jpg" width="140" alt="Lightning Bolt"></a><br><b>4</b> Lightning Bolt</td>
+<td align="center" valign="top"><a href="https://scryfall.com/card/tmp/57/counterspell"><img src="https://cards.scryfall.io/normal/front/d/a/dacdd380-71cf-4832-bd02-3697501325f3.jpg" width="140" alt="Counterspell"></a><br><b>4</b> Counterspell</td>
 <td align="center" valign="top"><a href="https://scryfall.com/card/ema/44/daze"><img src="https://cards.scryfall.io/normal/front/f/0/f05e9a3e-8a35-4687-85cb-e31b3927a5e2.jpg" width="140" alt="Daze"></a><br><b>4</b> Daze</td>
-<td align="center" valign="top"><a href="https://scryfall.com/card/dmr/50/force-of-will"><img src="https://cards.scryfall.io/normal/front/8/9/89f612d6-7c59-4a7b-a87d-45f789e88ba5.jpg" width="140" alt="Force of Will"></a><br><b>4</b> Force of Will</td>
+<td align="center" valign="top"><a href="https://scryfall.com/card/ema/49/force-of-will"><img src="https://cards.scryfall.io/normal/front/e/b/ebc01ab4-d89a-4d25-bf54-6aed33772f4b.jpg" width="140" alt="Force of Will"></a><br><b>4</b> Force of Will</td>
 <td align="center" valign="top"><a href="https://scryfall.com/card/dmr/215/fire-ice"><img src="https://cards.scryfall.io/normal/front/1/8/18303862-4726-4136-814f-157aa7006579.jpg" width="140" alt="Fire // Ice"></a><br><b>2</b> Fire // Ice</td>
 </tr>
 </table>

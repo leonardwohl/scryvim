@@ -244,15 +244,111 @@ local function expand(files)
   return out
 end
 
+-- Render `jobs` (`{ path, lines? }`) once the printings on their card lines
+-- are looked up: `done(ok, messages)`. Synchronous when nothing needs
+-- looking up. A printing that couldn't be looked up fails its deck; one
+-- Scryfall doesn't have, or of another card, shows the default printing,
+-- with a warning.
+local function render_jobs(jobs, check, done)
+  local cfg = config.get().render
+  local data = require('scryvim.data')
+  local markdown = require('scryvim.markdown')
+  local printings = require('scryvim.printings')
+  local wanted, seen = {}, {}
+  for _, job in ipairs(jobs) do
+    if not job.lines then
+      job.lines, job.err = markdown.read_lines(job.path)
+    end
+    job.wanted = job.lines and printings.wanted(job.lines) or {}
+    for _, w in ipairs(job.wanted) do
+      if not seen[w.key] and not printings.get(w.key) then
+        seen[w.key] = true
+        wanted[#wanted + 1] = w
+      end
+    end
+  end
+
+  local function finish(problems)
+    local by_key = {}
+    for _, p in ipairs(problems) do
+      by_key[p.key] = p
+    end
+    local ok, out, warned = true, {}, {}
+    local function warn(key, msg)
+      if not warned[key] then
+        warned[key] = true
+        out[#out + 1] = 'scryvim: ' .. msg
+      end
+    end
+    local function printing(e)
+      if not e.set then
+        return nil
+      end
+      local code = ('(%s)%s'):format(e.set:upper(), e.number and (' ' .. e.number) or '')
+      local key = printings.key(e.set, e.number, e.name)
+      local found = printings.get(key)
+      if found and printings.matches(found, e.name) then
+        return found
+      elseif found then
+        warn(key, ('%s is %s, not %s; showing the default printing'):format(code, found.name, e.name))
+      elseif by_key[key] and by_key[key].missing then
+        warn(key, ('Scryfall has no %s %s; showing the default printing'):format(e.name, code))
+      end
+      return nil
+    end
+    for _, job in ipairs(jobs) do
+      local target = vim.fn.fnamemodify(markdown.target(job.path), ':.')
+      local failed = nil
+      for _, w in ipairs(job.wanted) do
+        failed = failed or (by_key[w.key] and by_key[w.key].err)
+      end
+      local status, err
+      if job.err then
+        err = job.err
+      elseif failed then
+        err = ('%s not updated: a printing lookup failed: %s'):format(target, failed)
+      else
+        status, err = markdown.write(job.path, {
+          lookup = data.get,
+          printing = printing,
+          lines = job.lines,
+          check = check,
+          columns = cfg.columns,
+          width = cfg.width,
+        })
+      end
+      if not status then
+        ok = false
+        out[#out + 1] = 'scryvim: render: ' .. err
+      elseif status == 'outdated' then
+        ok = false
+        out[#out + 1] = ('scryvim: %s is out of date'):format(target)
+      elseif status == 'written' then
+        out[#out + 1] = 'scryvim: wrote ' .. target
+      elseif not check or #jobs == 1 then
+        out[#out + 1] = ('scryvim: %s is up to date'):format(target)
+      end
+    end
+    done(ok, out, next(warned) ~= nil)
+  end
+
+  if #wanted == 0 then
+    return finish({})
+  end
+  printings.resolve(wanted, finish)
+end
+
 --- Write each deck's Markdown page of card images next to it (`burn.deck`
 --- -> `burn.md`). Without `files`, renders the current buffer. With
 --- `check`, writes nothing and reports the pages that are out of date.
+--- Card lines with a set code show that printing, looked up on Scryfall
+--- the first time.
 ---
 --- Headless (`nvim --headless -c 'Scryvim render decks/*.deck'`), waits for
---- the card data, then quits: with status 1 if anything failed or, with
---- `check`, is out of date.
+--- the card data and printings, then quits: with status 1 if anything
+--- failed or, with `check`, is out of date.
 ---@param opts? { files?: string[], check?: boolean, bufnr?: integer }
----@return boolean ok
+---@return boolean|nil ok, nil while printings are being looked up
 function M.render(opts)
   opts = opts or {}
   local function result(ok, msg, level)
@@ -276,9 +372,6 @@ function M.render(opts)
       or 'no card data; run :Scryvim update'
     return result(false, 'scryvim: render: ' .. why, vim.log.levels.WARN)
   end
-  local cfg = config.get().render
-  local data = require('scryvim.data')
-  local markdown = require('scryvim.markdown')
   local jobs = {}
   if opts.files and #opts.files > 0 then
     for _, f in ipairs(expand(opts.files)) do
@@ -292,29 +385,19 @@ function M.render(opts)
     end
     jobs[1] = { path = path, lines = vim.api.nvim_buf_get_lines(b, 0, -1, false) }
   end
-  local ok, out = true, {}
-  for _, job in ipairs(jobs) do
-    local status, err = markdown.write(job.path, {
-      lookup = data.get,
-      lines = job.lines,
-      check = opts.check,
-      columns = cfg.columns,
-      width = cfg.width,
-    })
-    local target = vim.fn.fnamemodify(markdown.target(job.path), ':.')
-    if not status then
-      ok = false
-      out[#out + 1] = 'scryvim: render: ' .. err
-    elseif status == 'outdated' then
-      ok = false
-      out[#out + 1] = ('scryvim: %s is out of date'):format(target)
-    elseif status == 'written' then
-      out[#out + 1] = 'scryvim: wrote ' .. target
-    elseif not opts.check or #jobs == 1 then
-      out[#out + 1] = ('scryvim: %s is up to date'):format(target)
+  local ret = nil
+  render_jobs(jobs, opts.check, function(ok, out, warned)
+    local level = (not ok or warned) and vim.log.levels.WARN or nil
+    ret = result(ok, table.concat(out, '\n'), level)
+  end)
+  if ret == nil and M._headless() then
+    if not vim.wait(M.HEADLESS_WAIT_MS, function()
+      return ret ~= nil
+    end, 50) then
+      return result(false, 'scryvim: render: timed out looking up printings')
     end
   end
-  return result(ok, table.concat(out, '\n'), not ok and vim.log.levels.WARN or nil)
+  return ret
 end
 
 --- With `render.on_save`: after a deck is saved, update its page. Quiet
@@ -327,16 +410,23 @@ function M.render_on_save(bufnr)
     vim.notify('scryvim: card data is not ready; deck page not updated', vim.log.levels.WARN)
     return
   end
-  local cfg = config.get().render
-  local _, err = require('scryvim.markdown').write(vim.api.nvim_buf_get_name(bufnr), {
-    lookup = data.get,
-    lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),
-    columns = cfg.columns,
-    width = cfg.width,
-  })
-  if err then
-    vim.notify('scryvim: render: ' .. err, vim.log.levels.WARN)
-  end
+  local job = { path = vim.api.nvim_buf_get_name(bufnr), lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false) }
+  render_jobs({ job }, false, function(ok, out, warned)
+    if not ok or warned then
+      local problems = vim.tbl_filter(function(m)
+        return not m:find('^scryvim: wrote ') and not m:find(' is up to date$')
+      end, out)
+      vim.notify(table.concat(problems, '\n'), vim.log.levels.WARN)
+    end
+  end)
+end
+
+--- Pick a printing of the card on the cursor line from Scryfall, and set
+--- the line's set code and collector number to it.
+---@param bufnr? integer
+---@param row? integer
+function M.printing(bufnr, row)
+  require('scryvim.printings').pick(buf(bufnr), row or vim.api.nvim_win_get_cursor(0)[1])
 end
 
 --- Force a card data refresh, and an oracle tags one.
@@ -391,6 +481,9 @@ M.subcommands = {
     end
     M.render({ files = files, check = check })
   end,
+  printing = function()
+    M.printing()
+  end,
   update = function()
     M.update()
   end,
@@ -404,7 +497,10 @@ function M.command(o)
   local sub = o.fargs[1]
   local fn = sub and M.subcommands[sub]
   if not fn then
-    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|pane|open|render|update|info}', vim.log.levels.ERROR)
+    vim.notify(
+      'scryvim: usage: :Scryvim {search|sort|count|mana|pane|open|printing|render|update|info}',
+      vim.log.levels.ERROR
+    )
     return
   end
   fn(o)

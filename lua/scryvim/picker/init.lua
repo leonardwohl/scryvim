@@ -96,8 +96,9 @@ end
 ---@param max_pages integer
 ---@param cb fun(err: string|nil, cards: table[])
 ---@param on_page? fun(cards: table[], info: { page: integer, last: boolean, total_cards: integer })
-function M.fetch(query, max_pages, cb, on_page)
-  local key = max_pages .. '\0' .. query
+---@param strip_card? fun(card: table): table turns each Scryfall card into an item; `build.strip` by default
+function M.fetch(query, max_pages, cb, on_page, strip_card)
+  local key = max_pages .. '\0' .. query .. (strip_card and '\0custom' or '')
   local hit = cache_get(key)
   if hit then
     if on_page then
@@ -128,7 +129,7 @@ function M.fetch(query, max_pages, cb, on_page)
   local function strip(obj)
     local out = {}
     for i, card in ipairs(obj and obj.data or {}) do
-      out[i] = build.strip(card)
+      out[i] = (strip_card or build.strip)(card)
     end
     return out
   end
