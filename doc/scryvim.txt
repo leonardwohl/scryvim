@@ -58,7 +58,8 @@ Lines are one of:
 A set code in parentheses or brackets, optionally followed by a collector
 number, names a printing: `(M10) 146`, `(M10)` or `[M10]`. Lookups,
 counts and hover use the card's name and ignore it; deck pages show that
-printing (|scryvim-render|), and |:Scryvim-printing| sets it. Anything
+printing (|scryvim-render|), |:Scryvim-open| opens it, and
+|:Scryvim-printing| sets it. Anything
 after the number, such as a `*F*` foil marker, is kept.
 
 ==============================================================================
@@ -222,10 +223,13 @@ They also turn off with `counts = false`.
 
 :Scryvim open                                              *:Scryvim-open*
     Open the card on the cursor line on Scryfall in the browser, with
-    |vim.ui.open()|. It searches for the exact name (`!"Lightning Bolt"`),
-    leaving out the count, `SB:` prefix and set code, so it works for any
-    line, even before the card data loads. If the opener fails, the error
-    names the link so you can open it by hand.
+    |vim.ui.open()|. A line with a set code and collector number
+    (`(M10) 146`) opens that printing's page; a set code alone (`[M10]`)
+    searches for the exact name in that set (`!"Lightning Bolt" set:m10`);
+    otherwise it searches for the exact name (`!"Lightning Bolt"`). The
+    count and `SB:` prefix are left out, and it works even before the card
+    data loads. If the opener fails, the error names the link so you can
+    open it by hand.
 
     In an SSH session (`$SSH_TTY` or `$SSH_CONNECTION` set) the browser
     would open on the remote host, so the link is copied to your local
