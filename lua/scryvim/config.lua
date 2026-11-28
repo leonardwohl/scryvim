@@ -12,12 +12,15 @@ local function defaults()
     diagnostics = true,
     counts = true,
     picker = 'buffer',
+    open = 'auto',
     search = { max_pages = 3, prefill = true },
     hover = { max_width = 60 },
     pane = { width = 50, auto_open = true, min_columns = 100, tags = false },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end
+
+local OPEN = { auto = true, browser = true, copy = true }
 
 local PICKERS = { buffer = true, auto = true, snacks = true, telescope = true, fzf_lua = true, select = true }
 
@@ -51,6 +54,9 @@ local function validate(cfg)
   vim.validate('picker', cfg.picker, function(v)
     return (type(v) == 'string' and PICKERS[v] ~= nil) or (type(v) == 'table' and type(v.pick) == 'function')
   end, "one of 'buffer', 'auto', 'snacks', 'telescope', 'fzf_lua', 'select', or a table with pick()")
+  vim.validate('open', cfg.open, function(v)
+    return OPEN[v] ~= nil
+  end, "one of 'auto', 'browser', 'copy'")
   vim.validate('search', cfg.search, 'table')
   vim.validate('search.max_pages', cfg.search.max_pages, 'number')
   vim.validate('search.prefill', cfg.search.prefill, 'boolean')
