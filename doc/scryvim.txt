@@ -113,9 +113,11 @@ Set codes and collector numbers are preserved but ignored for lookups.
     and `SB:` lines; with a range, counts every card line in it.
 
     The query runs on Scryfall, limited to the deck's card names, in
-    batches of about 45 names. Results are kept for the session, so
-    counting again after an edit only asks about new cards. Needs network
-    access.
+    batches of about 45 names. Names the card data doesn't know, such as
+    half-typed ones, count as no match without asking. Results are saved
+    in `counts.json` in `cache_dir` until the card data updates, so
+    counting again, even after a restart, only asks about new cards. Needs
+    network access.
 
                                                         *scryvim-count-lines*
 To keep counts in the deck, add comment lines of the form
@@ -123,7 +125,9 @@ To keep counts in the deck, add comment lines of the form
 headers. Each line shows its total at the end, named by the label
 (`40 Red sources`), or `40 cards` without one. Totals are counted like
 |:Scryvim-count| without a range, and update a second after you stop
-typing. Query errors show on their line, including
+typing, once the card data has loaded. A count still waiting for its turn
+with Scryfall (at most one search every 0.6 s) is dropped when an edit makes
+it outdated. Query errors show on their line, including
 terms Scryfall doesn't understand, such as a misspelled keyword, rather
 than counting as if the term weren't there. Example: >
     // Removal (otag:removal)            12 Removal

@@ -10,29 +10,77 @@ local ACCEPT = 'application/json;q=0.9,*/*;q=0.8'
 M.SEARCH_URL = 'https://api.scryfall.com/cards/search?q='
 
 local SLOW = { ['/cards/search'] = true, ['/cards/named'] = true, ['/cards/collection'] = true }
-local SLOW_MS, FAST_MS = 500, 100
+--- Scryfall allows 2 requests a second on the slow endpoints; leave a margin
+--- so network jitter can't land two requests closer than 500 ms apart.
+M.SLOW_MS, M.FAST_MS = 600, 100
+--- How long an endpoint rests after a 429 before its queue moves again.
+M.BACKOFF_MS = 30000
 
-local next_slot = {}
+--- Message passed to a callback whose request was dropped unsent.
+M.DROPPED = 'request dropped: no longer needed'
+
+-- Endpoint -> { items, next_at, waiting }
+local queues = {}
 
 local function split_url(url)
   local host, path = url:match('^%a+://([^/?#]+)([^?#]*)')
   return host or '', (path ~= nil and path ~= '') and path or '/'
 end
 
---- Run `fn` no sooner than the endpoint's minimum interval after the
---- previous request to that endpoint. Requests queue in call order.
-local function throttle(url, fn)
+local function queue_for(url)
   local host, path = split_url(url)
-  local interval = SLOW[path] and SLOW_MS or FAST_MS
   local key = host .. path
-  local now = vim.uv.now()
-  local slot = math.max(now, next_slot[key] or 0)
-  next_slot[key] = slot + interval
-  if slot <= now then
-    fn()
-  else
-    vim.defer_fn(fn, slot - now)
+  local q = queues[key]
+  if not q then
+    q = { items = {}, next_at = 0, waiting = false, interval = SLOW[path] and M.SLOW_MS or M.FAST_MS }
+    queues[key] = q
   end
+  return q
+end
+
+-- Send what the queue allows now, and wake up when the next one may go.
+-- An item whose `wanted()` turns false is dropped when it reaches the
+-- front, without using a slot.
+local function pump(q)
+  if q.waiting then
+    return
+  end
+  while #q.items > 0 do
+    local item = q.items[1]
+    if item.wanted and not item.wanted() then
+      table.remove(q.items, 1)
+      item.drop()
+    else
+      local now = vim.uv.now()
+      if q.next_at > now then
+        q.waiting = true
+        vim.defer_fn(function()
+          q.waiting = false
+          pump(q)
+        end, q.next_at - now)
+        return
+      end
+      table.remove(q.items, 1)
+      q.next_at = now + q.interval
+      item.send()
+    end
+  end
+end
+
+--- Run `send` no sooner than the endpoint's minimum interval after the
+--- previous request to that endpoint. Requests queue in call order. With
+--- `wanted`, it is asked again just before sending, and `drop` runs instead
+--- once it returns false.
+local function throttle(url, send, wanted, drop)
+  local q = queue_for(url)
+  q.items[#q.items + 1] = { send = send, wanted = wanted, drop = drop }
+  pump(q)
+end
+
+-- After a 429, hold the endpoint's queue for `M.BACKOFF_MS`.
+local function back_off(url)
+  local q = queue_for(url)
+  q.next_at = math.max(q.next_at, vim.uv.now() + M.BACKOFF_MS)
 end
 
 --- Overridable for tests.
@@ -53,6 +101,7 @@ local function curl(url, extra)
 end
 
 local function rate_limited(url)
+  back_off(url)
   local msg = 'scryvim: Scryfall rate limit hit (HTTP 429); request aborted: ' .. url
   vim.notify(msg, vim.log.levels.WARN)
   return msg
@@ -63,10 +112,14 @@ end
 --- Scryfall error objects become `err`, except a 404 from `/cards/search`,
 --- which means "no matches" and yields an empty list (keeping any
 --- `warnings` about ignored query terms).
+---
+--- With `opts.wanted`, the request is dropped unsent (`cb(M.DROPPED)`) if
+--- it returns false by the time the request's turn comes.
 ---@param url string
 ---@param cb fun(err: string|nil, obj: table|nil)
-function M.get_json(url, cb)
-  throttle(url, function()
+---@param opts? { wanted?: fun(): boolean }
+function M.get_json(url, cb, opts)
+  local function send()
     M._system(
       curl(url, { '--compressed', '-w', '\n%{http_code}' }),
       vim.schedule_wrap(function(res)
@@ -95,6 +148,11 @@ function M.get_json(url, cb)
         cb(nil, obj)
       end)
     )
+  end
+  throttle(url, send, opts and opts.wanted, function()
+    vim.schedule(function()
+      cb(M.DROPPED)
+    end)
   end)
 end
 
@@ -119,6 +177,11 @@ function M.download(url, path, cb)
       end)
     )
   end)
+end
+
+--- For tests: forget queued requests and rate limit state.
+function M._reset()
+  queues = {}
 end
 
 function M.urlencode(s)

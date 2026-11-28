@@ -24,10 +24,12 @@ describe('http', function()
 
   before_each(function()
     calls = {}
+    http._reset()
   end)
 
   after_each(function()
     http._system = orig
+    http._reset()
   end)
 
   it('sends the required headers', function()
@@ -77,10 +79,44 @@ describe('http', function()
     assert.are.equal(1, #calls)
   end)
 
-  it('spaces /cards/search requests at least 500 ms apart', function()
+  it('spaces /cards/search requests 600 ms apart, a margin under the 2/s limit', function()
     respond('{"object":"list","data":[]}\n200')
     get('https://api.scryfall.com/cards/search?q=a')
     get('https://api.scryfall.com/cards/search?q=b')
-    assert.is_true(calls[2].t - calls[1].t >= 490)
+    assert.is_true(calls[2].t - calls[1].t >= 590)
+  end)
+
+  it('drops a queued request that is no longer wanted, without using its slot', function()
+    respond('{"object":"list","data":[]}\n200')
+    local errs = {}
+    local function queue(q, wanted)
+      http.get_json('https://api.scryfall.com/cards/search?q=' .. q, function(e)
+        errs[q] = e or 'ok'
+      end, { wanted = wanted })
+    end
+    queue('a')
+    queue('b', function()
+      return false
+    end)
+    queue('c')
+    assert(vim.wait(3000, function()
+      return errs.c ~= nil
+    end))
+    assert.are.equal(http.DROPPED, errs.b)
+    assert.are.equal(2, #calls)
+    -- c took b's slot.
+    assert.is_true(calls[2].t - calls[1].t < 900)
+  end)
+
+  it('holds the queue after a 429', function()
+    local orig_notify, orig_backoff = vim.notify, http.BACKOFF_MS
+    vim.notify = function() end
+    http.BACKOFF_MS = 1000
+    respond('{"object":"error","code":"rate_limited","status":429}\n429')
+    get('https://api.scryfall.com/cards/search?q=a')
+    respond('{"object":"list","data":[]}\n200')
+    get('https://api.scryfall.com/cards/search?q=b')
+    vim.notify, http.BACKOFF_MS = orig_notify, orig_backoff
+    assert.is_true(calls[2].t - calls[1].t >= 990)
   end)
 end)

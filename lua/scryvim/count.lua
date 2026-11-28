@@ -4,7 +4,9 @@
 --- `(<query>) (!"A" or !"B" ...)`. Results are matched back to deck entries
 --- by full name, since `!"Lightning Bolt"` also finds cards with a face of
 --- that name.
+local config = require('scryvim.config')
 local curve = require('scryvim.curve')
+local data = require('scryvim.data')
 local http = require('scryvim.http')
 local parse = require('scryvim.parse')
 local symbols = require('scryvim.symbols')
@@ -15,8 +17,114 @@ local M = {}
 --- 1039 did not), which surfaces as an "unclosed parentheses" error.
 M.MAX_QUERY = 1000
 
---- `cache[query][lower full name] = matched`, for this session.
+--- `cache[query][lower full name] = matched`. Saved to `counts.json` in
+--- the cache dir, and dropped when the card data changes.
 local cache = {}
+
+--- `bad[query] = err` for queries Scryfall warned about, which won't
+--- improve on a resend. Not saved.
+local bad = {}
+
+--- `inflight[query][lower full name] = request` for names asked about and
+--- not answered yet, so a recount waits on that answer instead of asking
+--- again.
+local inflight = {}
+
+--- How long after new results they're written to disk.
+M.SAVE_DELAY_MS = 1000
+
+-- What `cache` was loaded for: the cache dir and the card data's
+-- updated_at. Without card data on disk, nothing is saved.
+local disk = { dir = nil, version = nil, timer = nil, dirty = false }
+
+local function counts_path(dir)
+  return dir .. '/counts.json'
+end
+
+local function read_disk(dir, version)
+  local f = io.open(counts_path(dir), 'rb')
+  if not f then
+    return {}
+  end
+  local s = f:read('*a')
+  f:close()
+  local ok, obj = pcall(vim.json.decode, s)
+  if not ok or type(obj) ~= 'table' or obj.version ~= version or type(obj.queries) ~= 'table' then
+    return {}
+  end
+  return obj.queries
+end
+
+-- Copy answers from `from` into `into` that `into` doesn't have.
+local function merge(into, from)
+  for query, names in pairs(from) do
+    if type(query) == 'string' and type(names) == 'table' then
+      local known = into[query] or {}
+      into[query] = known
+      for name, matched in pairs(names) do
+        if type(name) == 'string' and type(matched) == 'boolean' and known[name] == nil then
+          known[name] = matched
+        end
+      end
+    end
+  end
+end
+
+--- Write the cache to disk now, merged with what other instances saved.
+function M.save()
+  if disk.timer then
+    disk.timer:stop()
+  end
+  if not disk.dirty or not disk.version then
+    return
+  end
+  disk.dirty = false
+  merge(cache, read_disk(disk.dir, disk.version))
+  vim.fn.mkdir(disk.dir, 'p')
+  local path = counts_path(disk.dir)
+  local tmp = ('%s.%d.tmp'):format(path, vim.fn.getpid())
+  local f = io.open(tmp, 'wb')
+  if not f then
+    return
+  end
+  -- An empty table encodes as `[]`; fine, it decodes to an empty table.
+  f:write(vim.json.encode({ version = disk.version, queries = cache }))
+  f:close()
+  os.rename(tmp, path)
+end
+
+local function save_later()
+  if not disk.version then
+    return
+  end
+  disk.dirty = true
+  if not disk.timer then
+    disk.timer = assert(vim.uv.new_timer())
+    vim.api.nvim_create_autocmd('VimLeavePre', {
+      group = vim.api.nvim_create_augroup('scryvim.count', { clear = true }),
+      callback = M.save,
+    })
+  end
+  disk.timer:stop()
+  disk.timer:start(M.SAVE_DELAY_MS, 0, vim.schedule_wrap(M.save))
+end
+
+-- Point `cache` at the current cache dir and card data, loading what was
+-- saved for them.
+local function sync()
+  local dir = config.get().cache_dir
+  local meta = data.read_meta()
+  local version = meta and type(meta.updated_at) == 'string' and meta.updated_at or nil
+  if dir == disk.dir and version == disk.version then
+    return
+  end
+  M.save()
+  cache, bad = {}, {}
+  disk.dir, disk.version, disk.dirty = dir, version, false
+  if version then
+    merge(cache, read_disk(dir, version))
+  end
+end
 
 --- Deck entries in `lines`, quantities summed per card. Without `all`,
 --- Sideboard and Maybeboard sections and `SB:` lines are skipped.
@@ -109,16 +217,34 @@ function M.build_query(query, names)
 end
 
 --- Count the cards in `entries` that match `query`. Matches are cached per
---- query and card, so a recount only asks Scryfall about new cards. A
---- query with terms Scryfall ignores (an unknown keyword) is an error.
---- `cb(err, result)` runs on the main loop.
+--- query and card, so a recount only asks Scryfall about new cards, and a
+--- card already being asked about is waited on, not asked again. With the
+--- card data loaded, names it doesn't know (half-typed ones) count as no
+--- match without asking. A query with terms Scryfall ignores (an unknown
+--- keyword) is an error. `cb(err, result)` runs on the main loop.
+---
+--- With `opts.wanted`, requests still queued once it returns false (and
+--- that no other count still wants) are dropped, and `cb` gets
+--- `http.DROPPED`.
 ---@param query string
 ---@param entries { name: string, count: integer }[]
 ---@param cb fun(err: string|nil, result: { total: integer, matches: { name: string, count: integer }[] }|nil)
-function M.run(query, entries, cb)
+---@param opts? { wanted?: fun(): boolean }
+function M.run(query, entries, cb, opts)
   query = vim.trim(query)
+  sync()
+  if bad[query] then
+    local err = bad[query]
+    return vim.schedule(function()
+      cb(err)
+    end)
+  end
   local known = cache[query] or {}
   cache[query] = known
+  local flying = inflight[query] or {}
+  inflight[query] = flying
+  local wanted = opts and opts.wanted or true
+  local lookup = data.ready() and data.get or nil
 
   local function finish()
     local result = { total = 0, matches = {} }
@@ -131,13 +257,25 @@ function M.run(query, entries, cb)
     cb(nil, result)
   end
 
-  local unknown = {}
+  -- Requests already on the way that this count needs, and names to ask.
+  local waits, seen, unknown = {}, {}, {}
   for _, e in ipairs(entries) do
-    if known[e.name:lower()] == nil then
-      unknown[#unknown + 1] = e.name
+    local key = e.name:lower()
+    if known[key] == nil and not seen[key] and not (lookup and not lookup(e.name)) then
+      seen[key] = true
+      local req = flying[key]
+      if req then
+        if not waits[req] then
+          waits[req] = true
+          waits[#waits + 1] = req
+          req.wanted[#req.wanted + 1] = wanted
+        end
+      else
+        unknown[#unknown + 1] = e.name
+      end
     end
   end
-  if #unknown == 0 then
+  if #unknown == 0 and #waits == 0 then
     return vim.schedule(finish)
   end
   local batches, err = M.batches(query, unknown)
@@ -147,46 +285,87 @@ function M.run(query, entries, cb)
     end)
   end
 
-  local pending, failed = #batches, nil
+  local pending, failed = #waits + #batches, nil
+  local function done(rerr)
+    failed = failed or rerr
+    pending = pending - 1
+    if pending == 0 then
+      if failed then
+        return cb(failed)
+      end
+      finish()
+    end
+  end
+  for _, req in ipairs(waits) do
+    req.waiters[#req.waiters + 1] = done
+  end
+
   for _, batch in ipairs(batches) do
+    local req = { wanted = { wanted }, waiters = { done } }
+    for _, name in ipairs(batch) do
+      flying[name:lower()] = req
+    end
+    local function settle(rerr)
+      for _, name in ipairs(batch) do
+        if flying[name:lower()] == req then
+          flying[name:lower()] = nil
+        end
+      end
+      for _, w in ipairs(req.waiters) do
+        w(rerr)
+      end
+    end
     http.get_json(http.SEARCH_URL .. http.urlencode(M.build_query(query, batch)), function(gerr, obj)
       -- Scryfall drops terms it can't parse and warns; without them a typo
       -- like `prodces:r` would match the whole deck.
       local warnings = obj and type(obj.warnings) == 'table' and #obj.warnings > 0 and obj.warnings
-      if gerr or warnings then
+      if gerr then
+        return settle(gerr)
+      end
+      if warnings then
         -- "... was ignored" no longer holds: the count is refused instead.
-        failed = failed or gerr or (table.concat(warnings, ' '):gsub(' was ignored%.', '.'))
-      else
-        -- At most a page's worth of cards per batch, so no paging.
-        local found = {}
-        for _, card in ipairs(obj.data or {}) do
-          if type(card.name) == 'string' then
-            found[card.name:lower()] = true
-          end
-          -- A deck line may name only the front face of a card that the
-          -- store doesn't know yet.
-          local face = card.card_faces and card.card_faces[1]
-          if face and type(face.name) == 'string' then
-            found[face.name:lower()] = true
-          end
+        local werr = table.concat(warnings, ' '):gsub(' was ignored%.', '.')
+        bad[query] = werr
+        return settle(werr)
+      end
+      -- At most a page's worth of cards per batch, so no paging.
+      local found = {}
+      for _, card in ipairs(obj.data or {}) do
+        if type(card.name) == 'string' then
+          found[card.name:lower()] = true
         end
-        for _, name in ipairs(batch) do
-          known[name:lower()] = found[name:lower()] or false
+        -- A deck line may name only the front face of a card that the
+        -- store doesn't know yet.
+        local face = card.card_faces and card.card_faces[1]
+        if face and type(face.name) == 'string' then
+          found[face.name:lower()] = true
         end
       end
-      pending = pending - 1
-      if pending == 0 then
-        if failed then
-          return cb(failed)
-        end
-        finish()
+      for _, name in ipairs(batch) do
+        known[name:lower()] = found[name:lower()] or false
       end
-    end)
+      save_later()
+      settle(nil)
+    end, {
+      wanted = function()
+        for _, w in ipairs(req.wanted) do
+          if w == true or w() then
+            return true
+          end
+        end
+        return false
+      end,
+    })
   end
 end
 
+--- For tests: forget all answers, in memory only.
 function M._reset()
-  cache = {}
+  if disk.timer then
+    disk.timer:stop()
+  end
+  cache, bad, inflight = {}, {}, {}
+  disk.dir, disk.version, disk.dirty = nil, nil, false
 end
 
 return M

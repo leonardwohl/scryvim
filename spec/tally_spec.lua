@@ -1,4 +1,5 @@
 local count = require('scryvim.count')
+local data = require('scryvim.data')
 local helpers = require('helpers')
 local http = require('scryvim.http')
 local tally = require('scryvim.tally')
@@ -46,6 +47,11 @@ describe('tally', function()
     end, 10)
     assert.are.same(want, marks())
   end
+
+  setup(function()
+    helpers.block_network()
+    helpers.load_fixture()
+  end)
 
   before_each(function()
     requests = {}
@@ -99,6 +105,18 @@ describe('tally', function()
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '// count red sources: prodces:r', '20 Mountain' })
     tally.attach(buf)
     settle({ [0] = { 'Unknown keyword “prodces”.', 'DiagnosticError' } })
+  end)
+
+  it('waits for the card data, then asks only about cards it knows', function()
+    -- The store is empty but its cache file is there: attaching loads it.
+    data._reset()
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '// count: produces:r', '20 mountain', '1 Sol Rin' })
+    tally.attach(buf)
+    settle({ [0] = { '20 cards', 'LspInlayHint' } })
+    assert.is_true(data.ready())
+    assert.are.equal(1, #requests)
+    assert.truthy(requests[1]:find('!"Mountain"', 1, true))
+    assert.falsy(requests[1]:find('Sol Rin', 1, true))
   end)
 
   it('sends nothing without count lines and clears marks when they go', function()

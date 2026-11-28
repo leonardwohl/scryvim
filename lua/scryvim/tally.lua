@@ -63,6 +63,13 @@ local function render(buf, current)
     vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
     return
   end
+  -- Counting before the card data loads would ask Scryfall about typed
+  -- names, then ask again about full names once it loads.
+  local waiting = false
+  if #rows > 0 then
+    data.ensure()
+    waiting = data.loading()
+  end
   local entries = count.entries(lines, data.get)
   local stats = count.stats(entries, data.ready() and data.get or nil)
   -- Mana symbols are counted locally, so they wait for the card data.
@@ -75,7 +82,9 @@ local function render(buf, current)
     vim.api.nvim_buf_clear_namespace(buf, M.ns, 0, -1)
     for j, row in ipairs(rows) do
       local res = results[j]
-      if res.err then
+      if not res then
+        -- Waiting for the card data.
+      elseif res.err then
         mark(buf, row.row, { { res.err, 'DiagnosticError' } })
       else
         local total = res.result.total
@@ -94,7 +103,7 @@ local function render(buf, current)
     end
   end
 
-  if #rows == 0 then
+  if #rows == 0 or waiting then
     return draw()
   end
   local pending = #rows
@@ -107,7 +116,7 @@ local function render(buf, current)
         return
       end
       draw()
-    end)
+    end, { wanted = current })
   end
 end
 
