@@ -19,7 +19,7 @@ vim.api.nvim_create_user_command('Scryvim', scryvim.command, {
   nargs = '+',
   range = true,
   complete = scryvim.complete,
-  desc = 'scryvim: search | sort | count | mana | pane | update | info',
+  desc = 'scryvim: search | sort | count | mana | pane | open | update | info',
 })
 
 vim.keymap.set('n', '<Plug>(scryvim-search)', function()
@@ -36,6 +36,9 @@ end, { desc = 'scryvim: sort selection by mana value' })
 vim.keymap.set('n', '<Plug>(scryvim-pane)', function()
   scryvim.pane()
 end, { desc = 'scryvim: toggle the preview pane' })
+vim.keymap.set('n', '<Plug>(scryvim-open)', function()
+  scryvim.open()
+end, { desc = 'scryvim: open the card on Scryfall' })
 
 vim.lsp.config('scryvim', {
   cmd = function(dispatchers)

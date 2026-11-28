@@ -212,6 +212,12 @@ They also turn off with `counts = false`.
     mana creatures and rocks with a lower mana value than the card. Lands
     that search for lands, such as fetch lands, count as every color.
 
+:Scryvim open                                              *:Scryvim-open*
+    Open the card on the cursor line on Scryfall in the browser, with
+    |vim.ui.open()|. It searches for the exact name (`!"Lightning Bolt"`),
+    leaving out the count, `SB:` prefix and set code, so it works for any
+    line, even before the card data loads.
+
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now, and the oracle tags
     (|scryvim-tags|) unless `pane.tags` is off.
@@ -224,11 +230,13 @@ scryvim defines no default keymaps. These are provided:
     <Plug>(scryvim-search)    normal mode               *<Plug>(scryvim-search)*
     <Plug>(scryvim-sort)      normal and visual mode    *<Plug>(scryvim-sort)*
     <Plug>(scryvim-pane)      normal mode               *<Plug>(scryvim-pane)*
+    <Plug>(scryvim-open)      normal mode               *<Plug>(scryvim-open)*
 
 Example: >lua
     vim.keymap.set('n', '<leader>ms', '<Plug>(scryvim-search)')
     vim.keymap.set({ 'n', 'x' }, '<leader>mo', '<Plug>(scryvim-sort)')
     vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
+    vim.keymap.set('n', '<leader>mf', '<Plug>(scryvim-open)')
 <
 ==============================================================================
 5. LSP FEATURES                                                  *scryvim-lsp*
@@ -332,6 +340,9 @@ require('scryvim').mana({buf}, {first}, {last})
                                           Same as |:Scryvim-mana|; 1-based
                                           inclusive lines.
 require('scryvim').pane()                 Same as |:Scryvim-pane|.
+require('scryvim').open({buf}, {row})     Same as |:Scryvim-open|; {row} is
+                                          1-based, the cursor line by
+                                          default.
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
 require('scryvim').statusline({opts})     Deck stats for 'statusline' and
