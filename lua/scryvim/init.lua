@@ -212,6 +212,133 @@ function M.open(bufnr, row)
   require('scryvim.open').open(buf(bufnr), row or vim.api.nvim_win_get_cursor(0)[1])
 end
 
+--- True without a UI (`nvim --headless`). Overridable for tests, which
+--- run headless.
+function M._headless()
+  return #vim.api.nvim_list_uis() == 0
+end
+
+--- How long a headless render waits for the card data to download.
+M.HEADLESS_WAIT_MS = 10 * 60 * 1000
+
+-- Card data in the current format (with image links), or false. Headless,
+-- blocks until it has loaded or downloaded.
+local function render_data()
+  local data = require('scryvim.data')
+  data.ensure()
+  if M._headless() then
+    vim.wait(M.HEADLESS_WAIT_MS, function()
+      local i = data.info()
+      return not i.updating and i.stage == nil
+    end, 50)
+  end
+  return data.current()
+end
+
+local function expand(files)
+  local out = {}
+  for _, f in ipairs(files) do
+    local matches = vim.fn.glob(f, false, true)
+    vim.list_extend(out, #matches > 0 and matches or { f })
+  end
+  return out
+end
+
+--- Write each deck's Markdown page of card images next to it (`burn.deck`
+--- -> `burn.md`). Without `files`, renders the current buffer. With
+--- `check`, writes nothing and reports the pages that are out of date.
+---
+--- Headless (`nvim --headless -c 'Scryvim render decks/*.deck'`), waits for
+--- the card data, then quits: with status 1 if anything failed or, with
+--- `check`, is out of date.
+---@param opts? { files?: string[], check?: boolean, bufnr?: integer }
+---@return boolean ok
+function M.render(opts)
+  opts = opts or {}
+  local function result(ok, msg, level)
+    if M._headless() then
+      -- Headless messages go to stderr, each but the first on a new line;
+      -- end the last one too.
+      if msg ~= '' then
+        vim.api.nvim_echo({ { msg } }, true, {})
+      end
+      io.stderr:write('\n')
+      vim.cmd(ok and 'qall!' or 'cquit 1')
+    elseif msg ~= '' then
+      vim.notify(msg, level or (ok and vim.log.levels.INFO or vim.log.levels.WARN))
+    end
+    return ok
+  end
+  if not render_data() then
+    local i = require('scryvim.data').info()
+    local why = (i.updating or i.stage) and 'card data is still updating; try again when it finishes'
+      or i.last_error
+      or 'no card data; run :Scryvim update'
+    return result(false, 'scryvim: render: ' .. why, vim.log.levels.WARN)
+  end
+  local cfg = config.get().render
+  local data = require('scryvim.data')
+  local markdown = require('scryvim.markdown')
+  local jobs = {}
+  if opts.files and #opts.files > 0 then
+    for _, f in ipairs(expand(opts.files)) do
+      jobs[#jobs + 1] = { path = f }
+    end
+  else
+    local b = buf(opts.bufnr)
+    local path = vim.api.nvim_buf_get_name(b)
+    if path == '' then
+      return result(false, 'scryvim: render: save the deck to a file first', vim.log.levels.ERROR)
+    end
+    jobs[1] = { path = path, lines = vim.api.nvim_buf_get_lines(b, 0, -1, false) }
+  end
+  local ok, out = true, {}
+  for _, job in ipairs(jobs) do
+    local status, err = markdown.write(job.path, {
+      lookup = data.get,
+      lines = job.lines,
+      check = opts.check,
+      columns = cfg.columns,
+      width = cfg.width,
+    })
+    local target = vim.fn.fnamemodify(markdown.target(job.path), ':.')
+    if not status then
+      ok = false
+      out[#out + 1] = 'scryvim: render: ' .. err
+    elseif status == 'outdated' then
+      ok = false
+      out[#out + 1] = ('scryvim: %s is out of date'):format(target)
+    elseif status == 'written' then
+      out[#out + 1] = 'scryvim: wrote ' .. target
+    elseif not opts.check or #jobs == 1 then
+      out[#out + 1] = ('scryvim: %s is up to date'):format(target)
+    end
+  end
+  return result(ok, table.concat(out, '\n'), not ok and vim.log.levels.WARN or nil)
+end
+
+--- With `render.on_save`: after a deck is saved, update its page. Quiet
+--- unless something goes wrong.
+---@param bufnr integer
+function M.render_on_save(bufnr)
+  local data = require('scryvim.data')
+  data.ensure()
+  if not data.current() then
+    vim.notify('scryvim: card data is not ready; deck page not updated', vim.log.levels.WARN)
+    return
+  end
+  local cfg = config.get().render
+  local _, err = require('scryvim.markdown').write(vim.api.nvim_buf_get_name(bufnr), {
+    lookup = data.get,
+    lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),
+    columns = cfg.columns,
+    width = cfg.width,
+  })
+  if err then
+    vim.notify('scryvim: render: ' .. err, vim.log.levels.WARN)
+  end
+end
+
 --- Force a card data refresh, and an oracle tags one.
 function M.update()
   require('scryvim.data').update({ force = true, announce = true })
@@ -253,6 +380,17 @@ M.subcommands = {
   open = function()
     M.open()
   end,
+  render = function(o)
+    local files, check = {}, false
+    for _, a in ipairs(vim.list_slice(o.fargs, 2)) do
+      if a == '--check' then
+        check = true
+      else
+        files[#files + 1] = a
+      end
+    end
+    M.render({ files = files, check = check })
+  end,
   update = function()
     M.update()
   end,
@@ -266,7 +404,7 @@ function M.command(o)
   local sub = o.fargs[1]
   local fn = sub and M.subcommands[sub]
   if not fn then
-    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|pane|open|update|info}', vim.log.levels.ERROR)
+    vim.notify('scryvim: usage: :Scryvim {search|sort|count|mana|pane|open|render|update|info}', vim.log.levels.ERROR)
     return
   end
   fn(o)
@@ -277,6 +415,9 @@ function M.complete(arglead, cmdline)
     return vim.tbl_filter(function(s)
       return vim.startswith(s, arglead)
     end, vim.tbl_keys(M.subcommands))
+  end
+  if cmdline:match('^%S*%s+render%s') then
+    return vim.fn.getcompletion(arglead, 'file')
   end
   return {}
 end

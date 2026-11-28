@@ -51,10 +51,12 @@ suite('Scryfall (live)', function()
       return k ~= 'legalities' and k ~= 'game_changer'
     end, vim.tbl_keys(bolt))
     assert.are.same(
-      { 'cmc', 'mana_cost', 'name', 'oracle_id', 'oracle_text', 'scryfall_uri', 'type_line' },
+      { 'cmc', 'image', 'mana_cost', 'name', 'oracle_id', 'oracle_text', 'scryfall_uri', 'type_line' },
       vim.fn.sort(keys)
     )
     assert.are.equal('{R}', bolt.mana_cost)
+    -- The image path, without its `?<timestamp>` query.
+    assert.truthy(bolt.image:match('^front/%x/%x/[%x-]+%.jpg$'), bolt.image)
 
     err, cards = await(function(cb)
       picker.fetch('t:goblin', 2, cb)
@@ -108,6 +110,9 @@ suite('Scryfall (live)', function()
     assert.is_true(data.info().count > 25000)
     assert.are.equal('{R}', data.get('Lightning Bolt').mana_cost)
     assert.are.equal('Delver of Secrets // Insectile Aberration', data.get('Delver of Secrets').name)
+    assert.truthy(data.get('Lightning Bolt').image:match('^front/'))
+    assert.truthy(data.get('Delver of Secrets').card_faces[2].image:match('^back/'))
+    assert.is_true(data.current())
     assert.are.equal('Lightning Bolt', data.complete('lightning bo')[1].name)
     assert.is_nil(data.get('Goblin'), 'tokens should be filtered')
     assert.is_nil(vim.uv.fs_stat(dir .. '/oracle-cards.jsonl.gz'), 'bulk download should be removed')
