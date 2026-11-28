@@ -108,7 +108,7 @@ vim.keymap.set('n', '<leader>mp', '<Plug>(scryvim-pane)')
 vim.keymap.set('n', '<leader>mf', '<Plug>(scryvim-open)')
 ```
 
-`:Scryvim open` searches Scryfall for the exact card name on the line (`!"Lightning Bolt"`), leaving out the count, `SB:` and set code, and opens the result with `vim.ui.open()`.
+`:Scryvim open` searches Scryfall for the exact card name on the line (`!"Lightning Bolt"`), leaving out the count, `SB:` and set code, and opens the result with `vim.ui.open()`. Over SSH a browser on the remote host wouldn't reach you, so it copies the link to your local clipboard instead, through your terminal (OSC 52). Set `open = 'browser'` or `open = 'copy'` to always do one or the other.
 
 ### Search
 
@@ -171,6 +171,7 @@ Everything works without configuration. To change something, set `vim.g.scryvim`
   diagnostics   = true,               -- flag unknown card names
   counts        = true,               -- live totals on count lines
   picker        = 'buffer',           -- 'auto' | 'snacks' | 'telescope' | 'fzf_lua' | 'select'
+  open          = 'auto',             -- :Scryvim open: 'browser', or 'copy' the link; 'auto' copies over SSH
   search        = { max_pages = 3, prefill = true }, -- 175 cards per page; prompt starts with your last search
   hover         = { max_width = 60 }, -- 0 for no limit
   pane          = { width = 50, auto_open = true, min_columns = 100, tags = false },

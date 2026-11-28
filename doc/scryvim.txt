@@ -220,7 +220,18 @@ They also turn off with `counts = false`.
     Open the card on the cursor line on Scryfall in the browser, with
     |vim.ui.open()|. It searches for the exact name (`!"Lightning Bolt"`),
     leaving out the count, `SB:` prefix and set code, so it works for any
-    line, even before the card data loads.
+    line, even before the card data loads. If the opener fails, the error
+    names the link so you can open it by hand.
+
+    In an SSH session (`$SSH_TTY` or `$SSH_CONNECTION` set) the browser
+    would open on the remote host, so the link is copied to your local
+    clipboard instead, through the terminal (OSC 52, see |clipboard-osc52|).
+    The terminal must allow OSC 52 clipboard writes. Set `open` (see
+    |scryvim-config|) to change this:
+
+    'auto'        copy over SSH, otherwise open the browser
+    'browser'     always open the browser
+    'copy'        always copy the link
 
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now, and the oracle tags
@@ -274,6 +285,7 @@ wins. `setup()` is optional. Defaults: >lua
       diagnostics   = true,
       counts        = true,     -- see |scryvim-count-lines|
       picker        = 'buffer', -- see below
+      open          = 'auto',   -- see |:Scryvim-open|
       search        = { max_pages = 3,     -- 175 cards per page
                         prefill = true },  -- prompt starts with last search
       hover         = { max_width = 60 },  -- columns; 0 for no limit
