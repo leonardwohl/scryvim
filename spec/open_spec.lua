@@ -89,7 +89,7 @@ describe('open', function()
         wait = function()
           return { code = 3, stderr = 'no method available\n' }
         end,
-      }, nil
+      }
     end
     require('scryvim').open()
     vim.ui.open = function()
