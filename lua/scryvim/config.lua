@@ -15,6 +15,7 @@ local function defaults()
     search = { max_pages = 3, prefill = true },
     hover = { max_width = 60 },
     pane = { width = 50, auto_open = true, min_columns = 100, tags = false },
+    render = { on_save = false, columns = 5, width = 140 },
     cache_dir = vim.fn.stdpath('cache') .. '/scryvim',
   }
 end
@@ -61,6 +62,10 @@ local function validate(cfg)
   vim.validate('pane.auto_open', cfg.pane.auto_open, 'boolean')
   vim.validate('pane.min_columns', cfg.pane.min_columns, 'number')
   vim.validate('pane.tags', cfg.pane.tags, 'boolean')
+  vim.validate('render', cfg.render, 'table')
+  vim.validate('render.on_save', cfg.render.on_save, 'boolean')
+  vim.validate('render.columns', cfg.render.columns, 'number')
+  vim.validate('render.width', cfg.render.width, 'number')
   vim.validate('cache_dir', cfg.cache_dir, 'string')
 end
 

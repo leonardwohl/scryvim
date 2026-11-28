@@ -42,6 +42,14 @@ local FACE_FIELDS = {
   'defense',
 }
 
+--- The part of an `image_uris.normal` link after the size, without the
+--- `?<timestamp>` query (which changes on rescans), so links built from it
+--- stay the same between card data updates: `front/6/d/<id>.jpg`.
+local function image_path(uris)
+  local url = type(uris) == 'table' and uris.normal
+  return type(url) == 'string' and url:match('^https://cards%.scryfall%.io/normal/([^?#]+)') or nil
+end
+
 local function pick(src, fields)
   local out = {}
   for _, f in ipairs(fields) do
@@ -58,6 +66,7 @@ end
 ---@return table
 function M.strip(card)
   local out = pick(card, FIELDS)
+  out.image = image_path(card.image_uris)
   -- Only the formats a card is banned or restricted in: the previews list
   -- those and nothing else, and most cards have none.
   if type(card.legalities) == 'table' then
@@ -78,6 +87,7 @@ function M.strip(card)
     out.card_faces = {}
     for i, face in ipairs(card.card_faces) do
       out.card_faces[i] = pick(face, FACE_FIELDS)
+      out.card_faces[i].image = image_path(face.image_uris)
     end
   end
   return out

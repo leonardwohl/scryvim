@@ -222,6 +222,18 @@ They also turn off with `counts = false`.
     leaving out the count, `SB:` prefix and set code, so it works for any
     line, even before the card data loads.
 
+:Scryvim render [--check] [{file} ...]                   *:Scryvim-render*
+    Write a Markdown page of card images for the deck, next to it and
+    named after it: `burn.deck` becomes `burn.md`. Commit it with the
+    deck, and GitHub shows the deck as images, with the change in a pull
+    request readable as cards rather than lines. Without {file}, renders
+    the current buffer; with them, those files (globs work: `decks/*`).
+    See |scryvim-render|.
+
+    With `--check`, writes nothing and reports the pages that are out of
+    date. Headless, it exits with status 1 when any are, or when a deck
+    can't be rendered. See |scryvim-render-headless|.
+
 :Scryvim update                                          *:Scryvim-update*
     Download and rebuild the card data now, and the oracle tags
     (|scryvim-tags|) unless `pane.tags` is off.
@@ -279,6 +291,9 @@ wins. `setup()` is optional. Defaults: >lua
       hover         = { max_width = 60 },  -- columns; 0 for no limit
       pane          = { width = 50, auto_open = true, min_columns = 100,
                         tags = false }, -- see |scryvim-tags|
+      render        = { on_save = false, -- see |scryvim-render|
+                        columns = 5,       -- cards per row
+                        width = 140 },     -- image width in pixels
       cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
     }
 <
@@ -329,6 +344,71 @@ ready. Like the card data, the list is refreshed in the background after
 is not retried until then; the pane and |:checkhealth| show the error. With
 `pane.tags` off (the default) the list is never downloaded.
 
+                                                          *scryvim-render*
+Deck pages ~
+
+|:Scryvim-render| turns a decklist into a Markdown page for reading on
+GitHub. The page follows the decklist:
+
+- It opens with the deck's size: `60 cards · 24 lands · 36 nonlands`, and
+  the sideboard's.
+- Each section line (`Deck`, `Sideboard`, ...) is a heading with its card
+  total.
+- A comment directly above cards is a smaller heading over them, with
+  their total: `// Removal (otag:removal)` shows `Removal · 8` and the
+  query under it. Other comments are shown as notes, and
+  `// count mana symbols` as the deck's mana symbols. `// count cards` is
+  left out, since the opening line has it.
+- Cards are a grid of images, `render.columns` a row and `render.width`
+  pixels wide, with the count and name under each, linked to the card on
+  Scryfall. Double-faced cards show their front face. Unknown cards are
+  listed by name.
+- `SB:` cards outside a sideboard section are gathered under a Sideboard
+  heading at the end.
+
+Images link to Scryfall's image server (cards.scryfall.io) rather than
+being saved, so the page is small. Each card shows the printing in the
+card data, which is Scryfall's default printing for the card; set codes on
+card lines are ignored, as for lookups. When Scryfall changes a card's
+default printing, the next render shows the new image.
+
+Rendering an unchanged deck again gives the same file, so the page only
+changes in a diff when the deck does. The page's first line says it was
+made by scryvim; a file without that line is never overwritten, so a
+`README.deck` won't replace your README.
+
+Rendering needs the card data, and the image links come with this version
+of the card data: the first time, wait for the update to finish (see
+|scryvim-data|).
+
+With `render.on_save = true`, saving a deck updates its page, quietly
+unless something goes wrong.
+
+                                                 *scryvim-render-headless*
+|:Scryvim-render| works without a UI, for scripts and git hooks: >sh
+    nvim --headless -c 'Scryvim render decks/*.deck'
+<
+It loads your config like any Neovim, waits for the card data (downloading
+it if needed), renders, and quits: with status 0, or 1 if a deck couldn't
+be rendered or, with `--check`, a page is out of date. Messages go to
+stderr.
+
+A pre-commit hook that renders the decks being committed and adds their
+pages: >sh
+    #!/bin/sh
+    # .git/hooks/pre-commit (make it executable)
+    decks=$(git diff --cached --name-only --diff-filter=ACM -- '*.deck' '*.dec')
+    [ -z "$decks" ] && exit 0
+    nvim --headless -c "Scryvim render $(echo $decks)" || exit 1
+    for deck in $decks; do git add "${deck%.*}.md"; done
+<
+Or, to stop the commit instead when a page is out of date, so you render
+it yourself: >sh
+    nvim --headless -c "Scryvim render --check $(echo $decks)"
+<
+These split the file list on whitespace, so they need deck file names
+without spaces.
+
 ==============================================================================
 8. LUA API                                                       *scryvim-api*
 
@@ -347,6 +427,9 @@ require('scryvim').pane()                 Same as |:Scryvim-pane|.
 require('scryvim').open({buf}, {row})     Same as |:Scryvim-open|; {row} is
                                           1-based, the cursor line by
                                           default.
+require('scryvim').render({opts})         Same as |:Scryvim-render|; {opts}
+                                          has `files` (a list), `check` and
+                                          `bufnr`. Returns true on success.
 require('scryvim').update()               Same as |:Scryvim-update|.
 require('scryvim').info()                 Same as |:Scryvim-info|.
 require('scryvim').statusline({opts})     Deck stats for 'statusline' and

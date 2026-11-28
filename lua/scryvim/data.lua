@@ -7,7 +7,7 @@ local M = {}
 M.BULK_URL = 'https://api.scryfall.com/bulk-data/oracle-cards'
 
 --- Bumped when cards.json gains fields; older caches are rebuilt.
-M.CACHE_FORMAT = 5
+M.CACHE_FORMAT = 6
 
 local BUILD_SCRIPT = vim.fs.joinpath(vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2)), 'build.lua')
 
@@ -23,6 +23,8 @@ local state = {
   subscribers = {},
   stage = nil,
   progress_subscribers = {},
+  -- CACHE_FORMAT of the cards in the store, from meta.json when loaded.
+  loaded_format = nil,
 }
 
 local function notify(msg, level)
@@ -112,6 +114,7 @@ end
 --- Replace the in-memory store with `cards`.
 ---@param cards table[]
 function M.index(cards)
+  state.loaded_format = nil
   local ix = indexer()
   for _, card in ipairs(cards) do
     ix.add(card)
@@ -126,11 +129,13 @@ function M.load_file(path)
   if not s then
     return false, 'cannot read ' .. path
   end
+  local format = (M.read_meta() or {}).format
   local ok, cards = pcall(vim.json.decode, s, JSON_OPTS)
   if not ok or type(cards) ~= 'table' then
     return false, 'invalid card cache ' .. path
   end
   M.index(cards)
+  state.loaded_format = format
   return true
 end
 
@@ -160,6 +165,7 @@ function M.load_file_async(path, cb)
       cb(not ok and err or nil)
     end)
   end
+  local format = (M.read_meta() or {}).format
   local ix = indexer()
   local pos = 3
   local function step()
@@ -172,6 +178,7 @@ function M.load_file_async(path, cb)
       local e = s:find('\n', pos, true)
       if not e then
         ix.finish()
+        state.loaded_format = format
         return cb(nil)
       end
       local line = s:sub(pos, e - 1)
@@ -196,6 +203,12 @@ end
 
 function M.ready()
   return state.loaded
+end
+
+--- True once the loaded cards are in the current cache format, so they
+--- have every field (such as image links), not just the older ones.
+function M.current()
+  return state.loaded and state.loaded_format == M.CACHE_FORMAT
 end
 
 --- True while card data is on its way but not loaded yet.
@@ -420,6 +433,7 @@ function M._reset()
   state.count, state.loaded, state.started, state.updating = 0, false, false, false
   state.waiters, state.last_error, state.subscribers = {}, nil, {}
   state.stage, state.progress_subscribers = nil, {}
+  state.loaded_format = nil
   load_generation = load_generation + 1
 end
 

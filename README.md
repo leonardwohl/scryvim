@@ -10,6 +10,7 @@ Build Magic: The Gathering decks in plain-text decklists in Neovim, backed by [S
 - **Sort** by mana value, with lands after spells.
 - **Preview pane** that follows the cursor and shows each card's odds of being cast on curve, and optionally its oracle tags.
 - **Statusline** text with the deck's size and mana symbols, plus a lualine component.
+- **Deck pages**: a Markdown file of card images to commit next to the deck, so decks and their diffs read as cards on GitHub.
 
 Card lookups use a local copy of Scryfall's card data, so nothing hits the network while you type. Only search and count lines ask Scryfall.
 <img width="1335" height="942" alt="scryvim editing a decklist" src="https://github.com/user-attachments/assets/01ae9260-5b62-4604-876f-5303836203a8" />
@@ -94,6 +95,7 @@ SB: 2 Duress
 | `:[range]Scryvim mana`          | Count mana symbols in mana costs, by color                   |
 | `:Scryvim pane`                 | Toggle the preview pane                                      |
 | `:Scryvim open`                 | Open the card under the cursor on Scryfall in the browser    |
+| `:Scryvim render [file ...]`    | Write a Markdown page of card images for the deck            |
 | `:Scryvim update`               | Refresh the card data and oracle tags now                    |
 | `:Scryvim info`                 | Card count and cache age                                     |
 
@@ -155,6 +157,22 @@ vim.o.statusline = "%f %m%=%{%v:lua.require'scryvim'.statusline()%} %l:%c"
 
 Options such as `{ 'scryvim', lands = true }` are in `:h scryvim-statusline`.
 
+### Deck pages
+
+`:Scryvim render` writes a Markdown page of the deck next to it, named after it (`burn.deck` becomes `burn.md`). Each section and each comment above cards becomes a heading with its card total, and the cards under it a grid of card images with their counts. Commit the page with the deck: GitHub shows the deck as cards, and in a pull request the page's diff has a line for each card that changed. See [`examples/`](examples) for a rendered deck.
+
+Images link to Scryfall's image server instead of being saved in the repo, and rendering an unchanged deck gives the same file, so the page only changes when the deck does. Set `render = { on_save = true }` to update the page whenever you save the deck.
+
+It also runs headless, for scripts and git hooks. It waits for the card data, renders, and exits with status 1 if something failed:
+
+```sh
+nvim --headless -c 'Scryvim render decks/*.deck'
+# or fail when a page is out of date, without writing it
+nvim --headless -c 'Scryvim render --check decks/*.deck'
+```
+
+`:h scryvim-render-headless` has a pre-commit hook that renders the decks being committed.
+
 ## Configuration
 
 Everything works without configuration. To change something, set `vim.g.scryvim` before the plugin loads, or call `require('scryvim').setup(opts)`. With lazy.nvim, `opts = { ... }` does the latter. The defaults:
@@ -174,6 +192,7 @@ Everything works without configuration. To change something, set `vim.g.scryvim`
   search        = { max_pages = 3, prefill = true }, -- 175 cards per page; prompt starts with your last search
   hover         = { max_width = 60 }, -- 0 for no limit
   pane          = { width = 50, auto_open = true, min_columns = 100, tags = false },
+  render        = { on_save = false, columns = 5, width = 140 }, -- deck pages
   cache_dir     = vim.fn.stdpath('cache') .. '/scryvim',
 }
 ```

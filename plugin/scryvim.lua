@@ -19,7 +19,7 @@ vim.api.nvim_create_user_command('Scryvim', scryvim.command, {
   nargs = '+',
   range = true,
   complete = scryvim.complete,
-  desc = 'scryvim: search | sort | count | mana | pane | open | update | info',
+  desc = 'scryvim: search | sort | count | mana | pane | open | render | update | info',
 })
 
 vim.keymap.set('n', '<Plug>(scryvim-search)', function()
@@ -102,6 +102,16 @@ vim.api.nvim_create_autocmd({ 'VimResized', 'TabEnter' }, {
   callback = function()
     if package.loaded['scryvim.pane'] and require('scryvim.config').get().pane.auto_open then
       require('scryvim.pane').fit()
+    end
+  end,
+})
+
+-- With `render.on_save`, update a deck's Markdown page when it's saved.
+vim.api.nvim_create_autocmd('BufWritePost', {
+  group = group,
+  callback = function(args)
+    if vim.bo[args.buf].filetype == 'deck' and require('scryvim.config').get().render.on_save then
+      require('scryvim').render_on_save(args.buf)
     end
   end,
 })

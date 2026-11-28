@@ -1,0 +1,37 @@
+// count cards
+// count mana symbols
+
+Deck
+// Threats (t:creature)
+4 Delver of Secrets
+4 Dragon's Rage Channeler
+2 Murktide Regent
+
+// Cantrips
+4 Brainstorm
+4 Ponder
+4 Preordain
+
+// Interaction (otag:removal or t:counterspell)
+4 Lightning Bolt
+4 Counterspell
+4 Daze
+4x Force of Will (EMA) 49
+2 Fire // Ice
+
+// Lands
+4 Volcanic Island
+4 Scalding Tarn
+4 Wasteland
+7 Island
+1 Mountain
+// Wasteland stays, even on the draw.
+
+Sideboard
+2 Pyroblast
+2 Red Elemental Blast
+2 Surgical Extraction
+2 Flusterstorm
+2 Meltdown
+2 Brazen Borrower
+3 Price of Progress
