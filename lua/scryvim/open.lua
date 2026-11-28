@@ -11,9 +11,11 @@ local function encode(s)
   end))
 end
 
---- The Scryfall search URL for the card on `line`: an exact name search
---- (`!"<name>"`) with the count, `SB:` prefix and set code left out. Nil
---- when the line has no card.
+--- The Scryfall URL for the card on `line`, without the count or `SB:`
+--- prefix: the printing's page for a set code and collector number
+--- (`(M10) 146`), an exact name search in the set for a set code alone
+--- (`[M10]`), otherwise an exact name search (`!"<name>"`). Nil when the
+--- line has no card.
 ---@param line string
 ---@return string|nil
 function M.url(line)
@@ -21,7 +23,14 @@ function M.url(line)
   if parsed.kind ~= 'card' then
     return nil
   end
-  return 'https://scryfall.com/search?q=' .. encode('!"' .. parsed.name .. '"')
+  if parsed.set and parsed.number then
+    return ('https://scryfall.com/card/%s/%s'):format(encode(parsed.set), encode(parsed.number))
+  end
+  local query = '!"' .. parsed.name .. '"'
+  if parsed.set then
+    query = query .. ' set:' .. parsed.set
+  end
+  return 'https://scryfall.com/search?q=' .. encode(query)
 end
 
 --- Copy `url` to the system clipboard of the terminal, which over SSH is

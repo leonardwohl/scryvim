@@ -112,7 +112,7 @@ vim.keymap.set('n', '<leader>mf', '<Plug>(scryvim-open)')
 vim.keymap.set('n', '<leader>mP', '<Plug>(scryvim-printing)')
 ```
 
-`:Scryvim open` searches Scryfall for the exact card name on the line (`!"Lightning Bolt"`), leaving out the count, `SB:` and set code, and opens the result with `vim.ui.open()`. Over SSH a browser on the remote host wouldn't reach you, so it copies the link to your local clipboard instead, through your terminal (OSC 52). Set `open = 'browser'` or `open = 'copy'` to always do one or the other.
+`:Scryvim open` opens the card on the line on Scryfall with `vim.ui.open()`: the exact printing for `(M10) 146`, a search in that set for `[M10]`, and otherwise a search for the exact name (`!"Lightning Bolt"`). Over SSH a browser on the remote host wouldn't reach you, so it copies the link to your local clipboard instead, through your terminal (OSC 52). Set `open = 'browser'` or `open = 'copy'` to always do one or the other.
 
 ### Search
 

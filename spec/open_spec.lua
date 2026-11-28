@@ -15,20 +15,27 @@ describe('open', function()
     vim.env.SSH_TTY, vim.env.SSH_CONNECTION, vim.g.scryvim = saved[1], saved[2], saved[3]
   end)
 
-  it('searches the exact name without count, SB: or set code', function()
+  it('searches the exact name without count or SB:', function()
     local bolt = base .. '%21%22Lightning%20Bolt%22'
     for _, line in ipairs({
       'Lightning Bolt',
       '4 Lightning Bolt',
-      '4x Lightning Bolt (M10) 146',
-      '  SB: 2 Lightning Bolt [M10]  ',
+      '  SB: 2 Lightning Bolt  ',
     }) do
       assert.are.equal(bolt, open.url(line), line)
     end
   end)
 
+  it("opens the line's printing", function()
+    assert.are.equal('https://scryfall.com/card/m10/146', open.url('4x Lightning Bolt (M10) 146'))
+    assert.are.equal('https://scryfall.com/card/plst/CLB-187', open.url('1 Lightning Bolt (PLST) CLB-187 *F*'))
+    -- A set code alone searches that set.
+    assert.are.equal(base .. '%21%22Lightning%20Bolt%22%20set%3Am10', open.url('  SB: 2 Lightning Bolt [M10]  '))
+    assert.are.equal(base .. '%21%22Lightning%20Bolt%22%20set%3Am10', open.url('1 Lightning Bolt (M10) *F*'))
+  end)
+
   it('encodes split card names and punctuation', function()
-    assert.are.equal(base .. '%21%22Fire%20%2F%2F%20Ice%22', open.url('1 Fire // Ice [MH2]'))
+    assert.are.equal(base .. '%21%22Fire%20%2F%2F%20Ice%22', open.url('1 Fire // Ice'))
     assert.are.equal(base .. '%21%22Jace%2C%20the%20Mind%20Sculptor%22', open.url('Jace, the Mind Sculptor'))
     assert.are.equal(base .. '%21%22R%26D%27s%20Secret%20Lair%22', open.url("R&D's Secret Lair"))
   end)
